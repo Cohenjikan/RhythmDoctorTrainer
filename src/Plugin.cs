@@ -14,7 +14,13 @@ namespace RDTrainer
     {
         public const string Guid = "com.cohen.rdtrainer";
         public const string Name = "RD Trainer (节奏医生修改器)";
-        public const string Version = "2.1.0";
+        public const string Version = "2.2.0";
+
+        // 防倒卖水印：此串同时用于「显示」与「启动完整性校验」。改动或删除它会导致 SHA256 校验失败、
+        // 整个修改器拒绝工作（不挂补丁、不应用任何功能）。谁删水印谁失效。
+        public const string Watermark = "本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer";
+        private const string ExpectedSig = "aa5b99cb20d0aee2d25454b831b309f2ac6432c6a41ed393ec43de203b4043c1";
+        internal static bool IntegrityOK;
 
         internal static ManualLogSource Log;
         private static ConfigEntry<KeyboardShortcut> _menuKey;
@@ -36,15 +42,37 @@ namespace RDTrainer
         private void Awake()
         {
             Log = Logger;
+
+            // Anti-resale integrity gate: the watermark must be intact, or the trainer refuses to
+            // function (no Harmony patches, no feature application, no menu). 删/改水印即失效。
+            IntegrityOK = Sig(Watermark) == ExpectedSig;
+            if (!IntegrityOK)
+            {
+                Log.LogError("完整性校验失败：水印被篡改，修改器已禁用。" +
+                             "请从 github.com/Cohenjikan/RhythmDoctorTrainer 获取免费正版。");
+                return; // do NOT patch or enable anything
+            }
+
             _menuKey = Config.Bind("General", "MenuKey", new KeyboardShortcut(KeyCode.Insert),
                 "Hotkey to open/close the trainer overlay.");
             new Harmony(Guid).PatchAll();
-            Log.LogInfo($"{Name} v{Version} loaded. Menu key = {_menuKey.Value}. " +
-                        "Patches: isDev / GetHitMargin / FailLevel / isZeroOffset.");
+            Log.LogInfo($"{Name} v{Version} loaded · {Watermark} · Menu key = {_menuKey.Value}");
+        }
+
+        private static string Sig(string s)
+        {
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            {
+                byte[] h = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(s));
+                var sb = new System.Text.StringBuilder(h.Length * 2);
+                foreach (byte b in h) sb.Append(b.ToString("x2"));
+                return sb.ToString();
+            }
         }
 
         private void Update()
         {
+            if (!IntegrityOK) return;
             try
             {
                 if (_menuKey.Value.IsDown()) _menuOpen = !_menuOpen;
@@ -107,11 +135,11 @@ namespace RDTrainer
 
         private void OnGUI()
         {
-            if (!_menuOpen) return;
+            if (!IntegrityOK || !_menuOpen) return;
             EnsureFont();
             var prev = GUI.skin.font;
             if (_cjk != null) GUI.skin.font = _cjk;
-            _win = GUILayout.Window(740181, _win, DrawWindow, $"节奏医生修改器 v{Version}  ·  [{_menuKey.Value}] 开/关");
+            _win = GUILayout.Window(740181, _win, DrawWindow, $"节奏医生修改器 v{Version}  ·  免费开源 github.com/Cohenjikan/RhythmDoctorTrainer  ·  [{_menuKey.Value}] 开/关");
             GUI.skin.font = prev;
         }
 
@@ -123,6 +151,7 @@ namespace RDTrainer
             if (GUILayout.Toggle(_tab == 2, " 高级 ", "Button")) _tab = 2;
             if (GUILayout.Toggle(_tab == 3, " 关卡直达 ", "Button")) _tab = 3;
             GUILayout.EndHorizontal();
+            GUILayout.Label("免费开源 · 严禁倒卖 · github.com/Cohenjikan/RhythmDoctorTrainer", Lbl());
             GUILayout.Space(4);
 
             _scroll = GUILayout.BeginScrollView(_scroll);

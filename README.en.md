@@ -6,6 +6,8 @@
 An **in-game GUI trainer** for *Rhythm Doctor*, built on BepInEx 5. Press **Insert** to open the overlay — autoplay (frame-perfect auto-play), game speed, jump-to-any-level, unlock-all, and developer tools.
 
 > Note: **Single-player only** (e.g. for recording flawless-clear videos). This project does not touch any online/versus logic — please don't use it for leaderboards. Not affiliated with 7th Beat Games.
+>
+> Free notice: this tool is **completely free and open-source — reselling is forbidden.** It ships with an integrity check: the menu title and load log show the project URL, and removing or altering that watermark **disables the trainer**.
 
 <p align="center">
   <img src="docs/images/tab-normal.png" width="32%" alt="Normal"/>
