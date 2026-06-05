@@ -1,0 +1,9 @@
+# Build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Keep the prebuilt plugin in dist/ (do not ignore it)
+!dist/RDTrainer.dll
