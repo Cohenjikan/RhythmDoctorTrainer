@@ -5,6 +5,8 @@
 
 <img src="docs/assets/hero.png" alt="节奏医生修改器 · Rhythm Doctor Trainer — 按 Insert 呼出的游戏内图形修改器" width="100%">
 
+<sub>▶ <a href="docs/assets/promo.mp4">观看 30 秒宣传片</a></sub>
+
 # 🎵 节奏医生 修改器 · Rhythm Doctor Trainer
 
 **按下 Insert，录制一段毫无瑕疵的满分通关 —— 不用练手速，也不用键盘宏。**

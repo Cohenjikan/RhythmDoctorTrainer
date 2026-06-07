@@ -5,6 +5,8 @@
 
 <img src="docs/assets/hero.png" alt="Rhythm Doctor Trainer — an in-game GUI trainer opened with the Insert key" width="100%">
 
+<sub>▶ <a href="docs/assets/promo.mp4">Watch the 30-second promo</a></sub>
+
 # 🎵 Rhythm Doctor Trainer · 节奏医生 修改器
 
 **Press Insert. Record a flawless clear. No timing grind, no keyboard macro.**
