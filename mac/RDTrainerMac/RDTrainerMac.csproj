@@ -9,7 +9,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>RDTrainerMac</AssemblyName>
     <Product>RD Trainer (节奏医生修改器) · macOS</Product>
-    <Version>2.40-mf2</Version>
+    <Version>2.41</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -22,6 +22,12 @@
   <ItemGroup>
     <!-- Harmony (pardeike Lib.Harmony): single self-contained 0Harmony.dll, shipped into Managed/ at install time -->
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared with the Windows build — single source of truth (see ../../src). -->
+    <Compile Include="../../src/Cheats.cs" Link="Cheats.cs" />
+    <Compile Include="../../src/Patches.cs" Link="Patches.cs" />
   </ItemGroup>
 
   <ItemGroup>

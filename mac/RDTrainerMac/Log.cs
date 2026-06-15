@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace RDTrainerMac
+namespace RDTrainer
 {
     // Minimal logger replacing BepInEx's ManualLogSource. Output lands in the Unity
     // Player.log (~/Library/Logs/7th Beat Games/Rhythm Doctor/Player.log).

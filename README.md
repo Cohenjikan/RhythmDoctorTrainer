@@ -7,12 +7,11 @@
 
 <sub> <a href="docs/assets/promo.mp4">观看 30 秒宣传片</a></sub>
 
-# 节奏医生 修改器 · Rhythm Doctor Trainer
+# 节奏医生 全平台修改器  Rhythm Doctor Trainer
 
-**按下 Insert，录制一段毫无瑕疵的满分通关 —— 不用练手速，也不用键盘宏。**
+**按下 F3 你就是伊恩医生**
 
-帧级满分 Autoplay · 保留「完美 / JCI」结算标记 · 0.1×–3× 变速 · 关卡直达 · 开发者解锁
-一个基于 BepInEx 的《节奏医生》游戏内图形修改器，专为**单机录制完美通关**而生 —— 绝不用于在线对战。
+《节奏医生》游戏内图形修改器，专为**单机录制完美通关**而生 —— 绝不用于在线对战。
 
 <br>
 
@@ -33,21 +32,48 @@
 > [!IMPORTANT]
 > **仅供单机自娱与录制**（例如制作完美通关视频）。本项目不触碰任何在线 / 对战 / 排行榜逻辑，也请勿用于会影响他人公平性的场景。与 7th Beat Games **无任何关联**。
 >
-> **完全免费、开源（MIT），严禁倒卖。** 内置完整性校验 —— 菜单标题与加载日志会显示本项目地址；删除或篡改该水印会让修改器**直接失效**。**如果你是花钱买来的，那你被人倒卖了** —— 请到本仓库免费获取。
+> **完全免费、开源（MIT），严禁倒卖。** 内置完整性校验 
 
-## 它能做什么
+## 安装
 
-《节奏医生》的核心是「在第 7 拍精准按下」。要全程满分，靠手速对点极难。这个修改器借用游戏引擎**自带的 autoplay**（把引擎原生的 `DebugSettings.Auto` 标志打开，由引擎按谱面自动演奏）—— **没有输入延迟，天生帧级满分，画面和真人手打完全一致**，而且刻意绕开了会闪出「autoplay on!」LED 字样的入口，录出来干干净净。
+### Windows
 
-它不做内存扫描，只通过 BepInEx + HarmonyX 调用游戏**自身已有**的函数与开关，因此比传统修改器稳定得多，游戏小更新通常也不易失效。
+请参考仓库右侧的 **[Releases](https://github.com/Cohenjikan/RhythmDoctorTrainer/releases)** 
 
-## 核心功能
+手动安装完整步骤见下方 [Windows 安装详解](#windows-安装详解bepinex)。
 
-> 一个游戏内 IMGUI 浮层，四个标签页：**普通 / 开发者 / 高级 / 关卡直达**。
 
-### 帧级满分 Autoplay（干净无水印）
 
-<img src="docs/assets/feature-1.png" alt="普通标签页：Autoplay 开关、变速滑块、放宽判定窗口、无敌等录制选项" align="right" width="45%">
+### macOS / Linux（原生，无需 BepInEx）
+
+打开「终端」，粘贴运行一行即可（自动装 .NET SDK → 编译 → 织入游戏启动钩子）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/install.sh | bash
+```
+
+然后正常用 Steam 启动游戏，进任意关卡按 **F3** 开 / 关菜单。卸载同样一行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/uninstall.sh | bash
+```
+> 游戏更新或 Steam「验证文件完整性」后，重跑一次安装命令即可。
+
+
+
+---
+
+## 功能展示：
+
+![feature](/Users/lui/Documents/GitHub/RhythmDoctorTrainer/docs/assets/feature.png)
+
+
+
+## 核心功能：
+
+### 帧级满分 Autoplay
+
+
 
 引擎按谱面满分自动演奏，**无输入延迟、画面无「autoplay on!」LED 字样**，与真人手打无异 —— 配合隐藏 HUD 即可录出完美素材。
 
@@ -57,51 +83,57 @@
 
 <br clear="right">
 
+### 失误(miss)自动重开
+
+针对追求 perfect 的高手玩家，本修改器提供失误时自动重开的功能
+
+<br clear="right">
+
 ### 游戏变速 0.1×–3×（含音高）
 
 慢放抠细节、或加速速通；**BPM 与音源音高同步缩放**，听感一致。
 
 > 在关卡**开始 / 重开**时生效，**无法中途变速**（引擎在加载时固定 BPM 与音高，中途改会失同步）。菜单内提供「重开本关并应用」按钮。
 
-### 放宽判定窗口 · 无敌 · 便利项
+### 放宽判定窗口/无敌
 
-<img src="docs/assets/feature-2.png" alt="高级标签页：音画校准、举重小游戏无尽模式、展会/隐藏曲（Song of the Sea）等进阶选项" align="right" width="45%">
+
 
 - **放宽判定窗口 ×1–×10**（默认 ×3）—— 手打也能轻松全 Perfect
 - **无敌** —— 永不失败、不被中途打断
 - **瞬间对白 / 跳过菜单转场 / 解锁帧率上限 / 关闭节拍提示音**
 
-### 关卡直达（绕过剧情 / NPC 解锁）
+### 关卡/隐藏关卡 直达
 
 列出**全部关卡**（带文字筛选），点一下**直接进入**，绕过 hub 的剧情 / NPC 揭示限制 —— 配合 Autoplay 即可录制任意关卡，包括被剧情锁住的那些。
 
 <br clear="right">
 
-### 解锁与进度工具
-
-- **解锁全部关卡**（写入存档）· **全部关卡刷 S** · **标记游戏通关** · **一键推进全部剧情**（铺满 hub 角色）
-
 ### 开发者 / 调试模式 + 成就控制
 
-<img src="docs/assets/feature-3.png" alt="开发者标签页：开发者模式、调试模式、进度/评级、成就控制、存档与杂项调试标志" align="right" width="45%">
-
-- **开发者模式（isDev）/ 调试模式（Debug）**，以及一组底层调试开关（NoPro / ForceNoSteamworks / EmulateMobile / RunningOnSteamDeck / DebugAmbience / PaigeStays / PauseOnFocusLost）
-- **解锁全部成就**（ 会写入你的 Steam 账号）/ **关闭成就发放**（作弊时防污染账号）
-- 打开存档目录、删除存档（二次确认）
-
-> 调试模式会在画面显示调试文字，**不适合干净录制**。
+**开发者模式（isDev）/ 调试模式（Debug）**，以及一组底层调试开关（NoPro / ForceNoSteamworks / EmulateMobile / RunningOnSteamDeck / DebugAmbience / PaigeStays / PauseOnFocusLost）
 
 <br clear="right">
 
-### 高级：校准 / 无限模式记录 / 彩蛋
+### 存档修改
 
 读取并应用音画校准值（视觉 / 输入 / 延迟）、编辑「举重节奏」无限模式最佳轮数、触发展会(Booth)模式 / 狗狗模式 / 隐藏曲 *Song of the Sea*。
 
-### 防倒卖水印 + 完整性闸门
+- **佩奇是否留下**
+- **解锁全部成就**（ 会写入你的 Steam 账号）/ **关闭成就发放**（作弊时防污染账号）
+- 一键 S+
+- 一键推进剧情
 
-为保证工具永久免费：修改器在启动时对水印做 SHA256 校验，**删除或篡改项目地址水印 = 整个修改器拒绝工作**（不挂补丁、不应用任何功能、不弹菜单）。
+## 原理对比对比
 
-## 安装
+|          | Windows                             | macOS / Linux                          |
+| -------- | ----------------------------------- | -------------------------------------- |
+| 注入方式 | BepInEx 5 + Doorstop（winhttp.dll） | Mono.Cecil 静态织入游戏启动函数        |
+| 插件形态 | BaseUnityPlugin                     | 普通 MonoBehaviour（Loader 生成）      |
+| 打补丁库 | BepInEx 自带的 HarmonyX             | 独立 0Harmony.dll（Lib.Harmony 2.4.2） |
+| 运行     | 直接使用编译结果                    | 编译+运行                              |
+
+## Windows 安装详解（BepInEx）
 
 适用于 **Steam 正式版**（Unity 6 / x64 / Mono）。需要先装 BepInEx 5。
 
@@ -127,7 +159,7 @@
 启动游戏后打开 `<游戏目录>\BepInEx\LogOutput.log`，看到这行即成功（水印部分按你的版本显示完整项目地址）：
 
 ```log
-[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.2.0 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = Insert
+[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.41 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = Insert
 ```
 
 进入任意关卡，按 **Insert** 呼出菜单。

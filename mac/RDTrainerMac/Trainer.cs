@@ -7,7 +7,7 @@ using System.Text;
 using HarmonyLib;
 using UnityEngine;
 
-namespace RDTrainerMac
+namespace RDTrainer
 {
     // In-game trainer for Rhythm Doctor (单机), macOS-native. F3 opens an overlay with three
     // tabs: 普通 (gameplay toggles), 存档修改 (irreversible save edits), 关卡直达 (level jump),
@@ -17,7 +17,7 @@ namespace RDTrainerMac
     {
         public const string Guid = "com.cohen.rdtrainer";
         public const string Name = "RD Trainer (节奏医生修改器)";
-        public const string Version = "2.40-mf2";
+        public const string Version = "2.41";
 
         // 防倒卖水印：此串同时用于「显示」与「启动完整性校验」。改动或删除它会导致 SHA256 校验失败、
         // 整个修改器拒绝工作（不挂补丁、不应用任何功能）。谁删水印谁失效。

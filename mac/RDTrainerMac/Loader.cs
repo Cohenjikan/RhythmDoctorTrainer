@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace RDTrainerMac
+namespace RDTrainer
 {
     // Entry point. A single call to Loader.Init() is woven into the game's RDStartup.Setup
     // by the Cecil patcher (../Patcher). It spawns a persistent host GameObject carrying the
