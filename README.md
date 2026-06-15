@@ -46,18 +46,18 @@
 
 ### macOS / Linux（原生，无需 BepInEx）
 
-打开「终端」，粘贴运行一行即可（自动装 .NET SDK → 编译 → 织入游戏启动钩子）：
+安装：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/install.sh | bash
 ```
 
-然后正常用 Steam 启动游戏，进任意关卡按 **F3** 开 / 关菜单。卸载同样一行：
+卸载：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/uninstall.sh | bash
 ```
-> 游戏更新或 Steam「验证文件完整性」后，重跑一次安装命令即可。
+> 游戏更新或 Steam 验证文件完整性后，需重新运行一次安装脚本。
 
 
 
@@ -65,7 +65,7 @@ curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs
 
 ## 功能展示：
 
-![feature](/Users/lui/Documents/GitHub/RhythmDoctorTrainer/docs/assets/feature.png)
+![feature](docs/assets/feature.png)
 
 
 

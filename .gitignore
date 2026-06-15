@@ -7,3 +7,4 @@ obj/
 
 # Keep the prebuilt plugin in dist/ (do not ignore it)
 !dist/RDTrainer.dll
+.DS_Store
