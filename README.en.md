@@ -149,7 +149,7 @@ For the **Steam release** (Unity 6 / x64 / Mono). BepInEx 5 is required first.
 After launching, open `<game>\BepInEx\LogOutput.log`; this line means success (the watermark prints your build's full project URL):
 
 ```log
-[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.41 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = Insert
+[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.50 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = Insert
 ```
 
 Enter any level and press **Insert** to open the menu.

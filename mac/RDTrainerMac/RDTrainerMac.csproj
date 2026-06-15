@@ -9,7 +9,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>RDTrainerMac</AssemblyName>
     <Product>RD Trainer (节奏医生修改器) · macOS</Product>
-    <Version>2.41</Version>
+    <Version>2.50</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>

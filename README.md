@@ -159,7 +159,7 @@ curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs
 启动游戏后打开 `<游戏目录>\BepInEx\LogOutput.log`，看到这行即成功（水印部分按你的版本显示完整项目地址）：
 
 ```log
-[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.41 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = Insert
+[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.50 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = Insert
 ```
 
 进入任意关卡，按 **Insert** 呼出菜单。
