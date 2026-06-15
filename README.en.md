@@ -38,9 +38,18 @@ An in-game GUI trainer for *Rhythm Doctor*, built for **single-player recording 
 
 ### Windows
 
-See the **[Releases](https://github.com/Cohenjikan/RhythmDoctorTrainer/releases)** in the right sidebar.
+Open **PowerShell** and paste one line (auto-locates the game → installs BepInEx if missing → downloads the latest DLL; existing users get a smooth upgrade by running it too):
 
-For full manual-install steps, see [Windows install (detailed)](#windows-install-bepinex-detailed) below.
+```powershell
+irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_install.ps1 | iex
+```
+
+Press **Insert** in a level. Uninstall the same way:
+
+```powershell
+irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_uninstall.ps1 | iex
+```
+> Or download manually from **[Releases](https://github.com/Cohenjikan/RhythmDoctorTrainer/releases)**; full steps in [Windows install (detailed)](#windows-install-bepinex-detailed) below.
 
 ### macOS / Linux (native, no BepInEx)
 

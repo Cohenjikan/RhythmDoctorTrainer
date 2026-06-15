@@ -38,9 +38,18 @@
 
 ### Windows
 
-请参考仓库右侧的 **[Releases](https://github.com/Cohenjikan/RhythmDoctorTrainer/releases)** 
+打开 **PowerShell**，粘贴运行一行即可（自动定位游戏 → 没装 BepInEx 就装上 → 下载最新 DLL；老用户跑这行也会平滑升级）：
 
-手动安装完整步骤见下方 [Windows 安装详解](#windows-安装详解bepinex)。
+```powershell
+irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_install.ps1 | iex
+```
+
+进入关卡按 **Insert** 呼出菜单。卸载同理：
+
+```powershell
+irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_uninstall.ps1 | iex
+```
+> 也可到右侧 **[Releases](https://github.com/Cohenjikan/RhythmDoctorTrainer/releases)** 手动下载；详细步骤见下方 [Windows 安装详解](#windows-安装详解bepinex)。
 
 
 

@@ -61,8 +61,13 @@ if [ -z "$HERE" ] || [ ! -f "$HERE/mac/RDTrainerMac/RDTrainerMac.csproj" ]; then
   fi
   SRC="${RDT_SRC:-$HOME/.rdtrainer-mac/src}"
   echo "==> 获取源码 -> $SRC"
-  if [ -d "$SRC/.git" ]; then git -C "$SRC" pull --ff-only || true
-  else mkdir -p "$(dirname "$SRC")"; git clone --depth 1 "$REPO_GIT" "$SRC"; fi
+  # Reuse the cached clone ONLY if it points at this same repo; otherwise wipe & re-clone.
+  # (A leftover clone of a different fork would otherwise hijack the build via `git pull`.)
+  if [ -d "$SRC/.git" ] && [ "$(git -C "$SRC" remote get-url origin 2>/dev/null)" = "$REPO_GIT" ]; then
+    git -C "$SRC" pull --ff-only || true
+  else
+    rm -rf "$SRC"; mkdir -p "$(dirname "$SRC")"; git clone --depth 1 "$REPO_GIT" "$SRC"
+  fi
   exec bash "$SRC/install.sh" "$@"
 fi
 
