@@ -348,6 +348,17 @@ namespace RDTrainer
 
         private void DrawWindow(int id)
         {
+            // 总开关（默认开启）。关闭后整个修改器暂停、释放对游戏的接管，下方功能全部置灰。
+            // 始终可点（不受置灰影响），以便随时重新启用。绿=开 / 红=关，与 Windows 版一致。
+            var prevColor = GUI.color;
+            GUI.color = Cheats.masterEnabled ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 0.5f, 0.5f);
+            Cheats.masterEnabled = GUILayout.Toggle(Cheats.masterEnabled,
+                Cheats.masterEnabled
+                    ? "  ● 修改器总开关：开   （点此关闭＝完全不干预游戏 / 编辑器）"
+                    : "  ○ 修改器总开关：关   （已暂停，游戏恢复原版；点此重新启用）", "Button");
+            GUI.color = prevColor;
+            GUILayout.Space(3);
+
             GUILayout.BeginHorizontal();
             if (_legacy)
             {
@@ -364,22 +375,16 @@ namespace RDTrainer
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("免费开源 严禁倒卖 · github.com/Cohenjikan/RhythmDoctorTrainer", Lbl());
-            GUILayout.Label("macOS 分支：https://github.com/MrTangLuyao/RhythmDoctorTrainerMac", Lbl());
-            GUILayout.Space(4);
-
-            // 修改器总开关 — 标签页下方常驻（新旧菜单都可见），可一键停用整个修改器。
-            bool master = GUILayout.Toggle(Cheats.masterEnabled,
-                Cheats.masterEnabled ? " ● 修改器总开关：开启中" : " ○ 修改器总开关：已关闭（全部功能停用，交还游戏/编辑器）");
-            if (master != Cheats.masterEnabled) { Cheats.masterEnabled = master; Log.Info("主开关 → " + (master ? "开启" : "关闭")); }
-            if (!Cheats.masterEnabled)
-                GUILayout.Label("总开关已关闭：下面所有功能暂不生效（含 F4/F5、Autoplay、按键显示等），游戏自带开关恢复正常。", Warn());
             GUILayout.Space(4);
 
             _scroll = GUILayout.BeginScrollView(_scroll);
+            bool prevEnabled = GUI.enabled;
+            GUI.enabled = Cheats.masterEnabled;   // 总开关关闭时整页置灰、功能不可用
             if (_legacy)
                 switch (_legacyTab) { case 1: DrawLegacyDev(); break; case 2: DrawLegacyAdvanced(); break; case 3: DrawLevels(); break; default: DrawLegacyNormal(); break; }
             else
                 switch (_tab) { case 1: DrawSave(); break; case 2: DrawLevels(); break; default: DrawNormal(); break; }
+            GUI.enabled = prevEnabled;
             GUILayout.EndScrollView();
 
             bool inGame = false; try { inGame = scnGame.instance != null; } catch { }
