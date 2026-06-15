@@ -76,7 +76,7 @@ Invoke-WebRequest -Uri $DllUrl -OutFile $dest -UseBasicParsing
 Write-Host ""
 Write-Host "==== 安装 / 更新成功 ====" -ForegroundColor Green
 Write-Host "已安装: $dest"
-Write-Host "启动游戏，进入任意关卡按 [Insert] 呼出修改器。" -ForegroundColor Cyan
+Write-Host "启动游戏，进入任意关卡按 [F3] 呼出修改器。" -ForegroundColor Cyan
 Write-Host "卸载：irm https://raw.githubusercontent.com/$Repo/refs/heads/main/win_uninstall.ps1 | iex"
 Write-Host "免费开源 · 严禁倒卖 · github.com/$Repo"
 Write-Host ""

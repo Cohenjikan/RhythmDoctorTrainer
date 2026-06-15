@@ -92,5 +92,5 @@ Write-Host ""
 Write-Host "==== 安装成功 ====" -ForegroundColor Green
 Write-Host "已安装: $plugins\RDTrainer.dll"
 Write-Host ""
-Write-Host "现在启动游戏，进入任意关卡，按 [Insert] 呼出修改器。" -ForegroundColor Cyan
+Write-Host "现在启动游戏，进入任意关卡，按 [F3] 呼出修改器。" -ForegroundColor Cyan
 Write-Host "免费开源 · 严禁倒卖 · github.com/Cohenjikan/RhythmDoctorTrainer"

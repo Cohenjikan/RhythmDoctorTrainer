@@ -3,7 +3,7 @@
 
 <div align="center">
 
-<img src="docs/assets/hero.png" alt="节奏医生修改器 · Rhythm Doctor Trainer — 按 Insert 呼出的游戏内图形修改器" width="100%">
+<img src="docs/assets/hero.png" alt="节奏医生修改器 · Rhythm Doctor Trainer — 按 F3 呼出的游戏内图形修改器" width="100%">
 
 <sub> <a href="docs/assets/promo.mp4">观看 30 秒宣传片</a></sub>
 
@@ -44,7 +44,7 @@
 irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_install.ps1 | iex
 ```
 
-进入关卡按 **Insert** 呼出菜单。卸载同理：
+进入关卡按 **F3** 呼出菜单。卸载同理：
 
 ```powershell
 irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_uninstall.ps1 | iex
@@ -168,14 +168,14 @@ curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs
 启动游戏后打开 `<游戏目录>\BepInEx\LogOutput.log`，看到这行即成功（水印部分按你的版本显示完整项目地址）：
 
 ```log
-[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.50 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = Insert
+[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.50 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = F3
 ```
 
-进入任意关卡，按 **Insert** 呼出菜单。
+进入任意关卡，按 **F3** 呼出菜单。
 
 ## 快速上手
 
-1. 进入任意关卡，按 **Insert** 开 / 关菜单。
+1. 进入任意关卡，按 **F3** 开 / 关菜单。
 2. **录制完美通关**：在「普通」页打开 **Autoplay** → 进入关卡 → 用 OBS 等录屏。
 3. **录被剧情锁住的关卡**：切到「**关卡直达**」页，点关卡名直接进入。
 4. **变速**：拖动滑块后需在关卡**开始 / 重开**时生效（菜单内有「重开本关并应用」按钮）。

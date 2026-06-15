@@ -20,5 +20,5 @@ if not exist "%GAME%\BepInEx\plugins" (
 copy /Y "%~dp0..\dist\RDTrainer.dll" "%GAME%\BepInEx\plugins\" >nul
 if errorlevel 1 ( echo [ERROR] copy failed. & pause & exit /b 1 )
 
-echo Done. Launch the game and press Insert in any level.
+echo Done. Launch the game and press F3 in any level.
 pause

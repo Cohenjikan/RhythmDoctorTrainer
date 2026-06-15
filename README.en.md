@@ -3,7 +3,7 @@
 
 <div align="center">
 
-<img src="docs/assets/hero.png" alt="Rhythm Doctor Trainer — an in-game GUI trainer opened with Insert" width="100%">
+<img src="docs/assets/hero.png" alt="Rhythm Doctor Trainer — an in-game GUI trainer opened with F3" width="100%">
 
 <sub> <a href="docs/assets/promo.mp4">Watch the 30-second promo</a></sub>
 
@@ -44,7 +44,7 @@ Open **PowerShell** and paste one line (auto-locates the game → installs BepIn
 irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_install.ps1 | iex
 ```
 
-Press **Insert** in a level. Uninstall the same way:
+Press **F3** in a level. Uninstall the same way:
 
 ```powershell
 irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_uninstall.ps1 | iex
@@ -158,14 +158,14 @@ For the **Steam release** (Unity 6 / x64 / Mono). BepInEx 5 is required first.
 After launching, open `<game>\BepInEx\LogOutput.log`; this line means success (the watermark prints your build's full project URL):
 
 ```log
-[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.50 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = Insert
+[Info : RD Trainer (节奏医生修改器)] RD Trainer (节奏医生修改器) v2.50 loaded · 本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer · Menu key = F3
 ```
 
-Enter any level and press **Insert** to open the menu.
+Enter any level and press **F3** to open the menu.
 
 ## Quickstart
 
-1. Enter any level, press **Insert** to toggle the menu.
+1. Enter any level, press **F3** to toggle the menu.
 2. **Record a flawless clear**: on the "Normal" tab turn on **Autoplay** → enter a level → capture with OBS, etc.
 3. **Record a story-locked level**: switch to the **Level jump** tab and click a level name to enter directly.
 4. **Speed**: after moving the slider it applies at level **start / restart** (the menu has a "restart & apply" button).

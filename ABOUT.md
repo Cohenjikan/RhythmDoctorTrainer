@@ -2,9 +2,9 @@
 
 ## 这是什么 What
 
-**节奏医生修改器 (Rhythm Doctor Trainer)** 是一个为单机节奏游戏《Rhythm Doctor》制作的游戏内修改器（trainer）。它以一个 BepInEx 插件的形式运行，在游戏里叠加一个图形菜单（按 `Insert` 呼出），把游戏里原本隐藏的能力暴露成可一键开关的选项。
+**节奏医生修改器 (Rhythm Doctor Trainer)** 是一个为单机节奏游戏《Rhythm Doctor》制作的游戏内修改器（trainer）。它以一个 BepInEx 插件的形式运行，在游戏里叠加一个图形菜单（按 `F3` 呼出），把游戏里原本隐藏的能力暴露成可一键开关的选项。
 
-A small in-game trainer for the single-player rhythm game *Rhythm Doctor*, shipped as a BepInEx plugin that draws an IMGUI overlay (toggled with `Insert`).
+A small in-game trainer for the single-player rhythm game *Rhythm Doctor*, shipped as a BepInEx plugin that draws an IMGUI overlay (toggled with `F3`).
 
 ## 为什么 Why
 
