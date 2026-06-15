@@ -20,7 +20,7 @@ namespace RDTrainer
     {
         public const string Guid = "com.cohen.rdtrainer";
         public const string Name = "RD Trainer (节奏医生修改器)";
-        public const string Version = "2.4.0";
+        public const string Version = "2.5.0";
 
         // 防倒卖水印：此串同时用于「显示」与「启动完整性校验」。改动或删除它会导致 SHA256 校验失败、
         // 整个修改器拒绝工作（不挂补丁、不应用任何功能）。谁删水印谁失效。
@@ -42,6 +42,7 @@ namespace RDTrainer
         private string _lvFilter = "";
         private Font _cjk;
         private bool _lastSpeedOverride;
+        private bool _wasMaster = true;   // master-switch edge tracker for one-time release
 
         // local UI state
         private bool _wipeConfirm;
@@ -124,6 +125,12 @@ namespace RDTrainer
                 }
                 if (_menuOpen) { Cursor.visible = true; Cursor.lockState = CursorLockMode.None; }
 
+                // ApplyState handles the master switch internally (releasing all takeovers once on
+                // the ON->OFF edge). When the master switch is OFF, skip every other trainer action
+                // below so nothing is taken over — game/editor behave 100% vanilla.
+                ApplyState();
+                if (!Cheats.masterEnabled) return;
+
                 if (Input.GetKeyDown(KeyCode.F4))
                     Run("WinLevel(F4)", () => { var g = scnGame.instance; if (g != null) g.WinLevel(); });
                 if (Input.GetKeyDown(KeyCode.F5))
@@ -131,8 +138,6 @@ namespace RDTrainer
 
                 if (Cheats.autoRestartOnMiss) AutoRestartTick();
                 if (Cheats.keyOverlay) CaptureKeys();
-
-                ApplyState();
             }
             catch (Exception e) { Log.LogError("Update: " + e); }
         }
@@ -179,6 +184,16 @@ namespace RDTrainer
 
         private void ApplyState()
         {
+            // Master switch: OFF = trainer dormant. On the ON->OFF edge, release every takeover
+            // back to vanilla once, then stop touching anything — so e.g. the editor's own Autoplay
+            // works again (the trainer no longer clamps DebugSettings.Auto every frame).
+            if (!Cheats.masterEnabled)
+            {
+                if (_wasMaster) { ReleaseToVanilla(); _wasMaster = false; }
+                return;
+            }
+            _wasMaster = true;
+
             var ds = DebugSettings.instance;
             bool inGame = false;
             try { inGame = scnGame.instance != null; } catch { }
@@ -220,6 +235,37 @@ namespace RDTrainer
             try { if (RDString.samuraiMode != Cheats.samuraiMode) RDString.samuraiMode = Cheats.samuraiMode; } catch { }
         }
 
+        // Undo every per-frame takeover so the game/editor regain full native control. Called once
+        // when the master switch flips OFF. Restores the DebugSettings flags, level speed and
+        // samurai mode to vanilla; one-shot UI actions (save edits etc.) leave no residue to undo.
+        private void ReleaseToVanilla()
+        {
+            try
+            {
+                var ds = DebugSettings.instance;
+                if (ds.Auto) ds.Auto = false;
+                if (ds.InstantDialogue) ds.InstantDialogue = false;
+                if (ds.SkipMenuTransitions) ds.SkipMenuTransitions = false;
+                if (ds.UnlimitedFramerate) ds.UnlimitedFramerate = false;
+                if (ds.Debug) ds.Debug = false;
+                if (!ds.BeatSounds) ds.BeatSounds = true;
+                if (ds.GiveAchievements) ds.GiveAchievements = false; // vanilla default is false (field is unread)
+                // NOTE: the 杂项调试标志 foldout flags (NoPro/EmulateMobile/RunningOnSteamDeck/...) are
+                // one-shot, user-edited live settings on the vanilla DebugSettings surface — not per-frame
+                // trainer takeovers — and have no Cheats backing to restore on re-enable, so we leave them
+                // as the user set them. The master gray-out already blocks editing them while OFF.
+            }
+            catch { }
+            try { if (RDString.samuraiMode) RDString.samuraiMode = false; } catch { }
+            // booth makes the game's own isDev getter return true (bypassing the gated IsDevPatch), so
+            // clear it on release — otherwise dev mode would linger while the master switch is OFF.
+            try { if (RDC.booth) RDC.booth = false; } catch { }
+            try { scnGame.levelSpeed = 1f; } catch { }
+            try { ApplyLiveSpeed(1f); } catch { }
+            _lastSpeedOverride = false;   // keep speed bookkeeping consistent with the released state
+            Log.LogInfo("master switch OFF — released active takeovers to vanilla");
+        }
+
         // Mid-level speed: RDTime.speed drives the conductor's timing math each frame; the song's
         // audible pitch is whatever AudioSource.pitch was set at Play, so push both together.
         private static void ApplyLiveSpeed(float v)
@@ -256,7 +302,7 @@ namespace RDTrainer
             if (InNonLevelScene() && !_menuOpen)
                 GUILayout.Window(740182, _hintWin, DrawHintWindow, "节奏医生修改器");
 
-            if (Cheats.keyOverlay)
+            if (Cheats.masterEnabled && Cheats.keyOverlay)
                 _keysWin = GUILayout.Window(740183, _keysWin, DrawKeysWindow, "按键显示");
 
             if (_menuOpen)
@@ -291,6 +337,17 @@ namespace RDTrainer
 
         private void DrawWindow(int id)
         {
+            // 总开关（默认开启）。关闭后整个修改器暂停、释放对游戏的接管，下方功能全部置灰。
+            // 始终可点（不受置灰影响），以便随时重新启用。
+            var prevColor = GUI.color;
+            GUI.color = Cheats.masterEnabled ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 0.5f, 0.5f);
+            Cheats.masterEnabled = GUILayout.Toggle(Cheats.masterEnabled,
+                Cheats.masterEnabled
+                    ? "  ● 修改器总开关：开   （点此关闭＝完全不干预游戏 / 编辑器）"
+                    : "  ○ 修改器总开关：关   （已暂停，游戏恢复原版；点此重新启用）", "Button");
+            GUI.color = prevColor;
+            GUILayout.Space(3);
+
             GUILayout.BeginHorizontal();
             if (_legacy)
             {
@@ -310,10 +367,13 @@ namespace RDTrainer
             GUILayout.Space(4);
 
             _scroll = GUILayout.BeginScrollView(_scroll);
+            bool prevEnabled = GUI.enabled;
+            GUI.enabled = Cheats.masterEnabled;   // 总开关关闭时整页置灰、功能不可用
             if (_legacy)
                 switch (_legacyTab) { case 1: DrawLegacyDev(); break; case 2: DrawLegacyAdvanced(); break; case 3: DrawLevels(); break; default: DrawLegacyNormal(); break; }
             else
                 switch (_tab) { case 1: DrawSave(); break; case 2: DrawLevels(); break; default: DrawNormal(); break; }
+            GUI.enabled = prevEnabled;
             GUILayout.EndScrollView();
 
             bool inGame = false; try { inGame = scnGame.instance != null; } catch { }
@@ -444,7 +504,8 @@ namespace RDTrainer
 
             GUILayout.Space(8);
             _wipeConfirm = GUILayout.Toggle(_wipeConfirm, " 我确认删除操作不可恢复");
-            GUI.enabled = _wipeConfirm;
+            bool wipeWas = GUI.enabled;                 // respect the master-switch page gray-out
+            GUI.enabled = wipeWas && _wipeConfirm;
             GUILayout.BeginHorizontal();
             GUILayout.Label("删除槽位 (1-3)", GUILayout.Width(110));
             _slotDelText = GUILayout.TextField(_slotDelText ?? "", GUILayout.Width(30));
@@ -453,7 +514,7 @@ namespace RDTrainer
             GUILayout.EndHorizontal();
             if (GUILayout.Button("🗑 删除全部存档（不可恢复）"))
             { Run("DeleteSavedData", () => { Persistence.DeleteSavedData(); InvalidateCaches(); }); _wipeConfirm = false; }
-            GUI.enabled = true;
+            GUI.enabled = wipeWas;
         }
 
         // label + text field + 写入 button, shared layout for the record editors
@@ -601,10 +662,11 @@ namespace RDTrainer
                 Run("OpenSaveDir", () => RDUtils.RevealInExplorer(Persistence.DataPath));
             GUILayout.EndHorizontal();
             _wipeConfirm = GUILayout.Toggle(_wipeConfirm, " 我确认要删除全部存档");
-            GUI.enabled = _wipeConfirm;
+            bool wipeWas2 = GUI.enabled;                // respect the master-switch page gray-out
+            GUI.enabled = wipeWas2 && _wipeConfirm;
             if (GUILayout.Button("🗑 删除全部存档（不可恢复）"))
             { Run("DeleteSavedData", () => Persistence.DeleteSavedData()); _wipeConfirm = false; }
-            GUI.enabled = true;
+            GUI.enabled = wipeWas2;
 
             GUILayout.Space(8);
             _showMisc = GUILayout.Toggle(_showMisc, _showMisc ? "▼ 杂项调试标志" : "▶ 杂项调试标志", "Button");

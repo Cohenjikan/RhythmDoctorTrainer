@@ -6,6 +6,11 @@ namespace RDTrainer
     // Shared runtime state, read by Update(), OnGUI() and the Harmony patches below.
     internal static class Cheats
     {
+        // ---- master switch ----
+        // 总开关，默认开启。关闭时整个修改器停止工作并把对游戏状态的接管释放回原版
+        // （见 Plugin.ApplyState / ReleaseToVanilla），游戏与编辑器恢复原生行为。
+        public static bool masterEnabled = true;
+
         // ---- normal player ----
         public static bool autoplay = false;       // DebugSettings.Auto in gameplay
         public static bool forceFlawless = true;    // keep JCI/flawless marker on a clean autoplay run
@@ -39,7 +44,7 @@ namespace RDTrainer
     {
         private static void Postfix(LevelBase __instance, ref bool __result)
         {
-            if (!Cheats.forceFlawless || __result) return;
+            if (!Cheats.masterEnabled || !Cheats.forceFlawless || __result) return;
             try
             {
                 if (__instance.totalOffset == 0f && __instance.numMistakes == 0f)
@@ -55,7 +60,7 @@ namespace RDTrainer
     {
         private static void Postfix(ref bool __result)
         {
-            if (Cheats.devMode) __result = true;
+            if (Cheats.masterEnabled && Cheats.devMode) __result = true;
         }
     }
 
@@ -66,7 +71,7 @@ namespace RDTrainer
     {
         private static void Postfix(ref float __result)
         {
-            if (Cheats.widenJudge)
+            if (Cheats.masterEnabled && Cheats.widenJudge)
                 __result *= Mathf.Max(1f, Cheats.judgeMult);
         }
     }
