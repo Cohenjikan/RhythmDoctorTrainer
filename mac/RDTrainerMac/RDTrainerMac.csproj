@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Mac-native build of the Rhythm Doctor trainer. NO BepInEx: this DLL is loaded by a
+    one-line static hook woven into the game's own RDStartup.Setup (see ../Patcher).
+    Build:  dotnet build -c Release -p:GameDir="/path/to/Rhythm Doctor.app/Contents/Resources/Data/Managed"
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>RDTrainerMac</AssemblyName>
+    <Product>RD Trainer (节奏医生修改器) · macOS</Product>
+    <Version>2.40-mf2</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <NoWarn>CS1701;CS1702;MSB3277</NoWarn>
+    <!-- Managed/ folder of the macOS game build. Override with -p:Managed=... -->
+    <Managed Condition="'$(Managed)' == ''">$(HOME)/Library/Application Support/Steam/steamapps/common/Rhythm Doctor/Rhythm Doctor.app/Contents/Resources/Data/Managed</Managed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Harmony (pardeike Lib.Harmony): single self-contained 0Harmony.dll, shipped into Managed/ at install time -->
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(Managed)/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(Managed)/Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RDTools">
+      <HintPath>$(Managed)/RDTools.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(Managed)/UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(Managed)/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(Managed)/UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(Managed)/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(Managed)/UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
