@@ -283,20 +283,7 @@ namespace RDTrainer
         private void EnsureFont()
         {
             if (_cjk != null) return;
-            // CreateDynamicFontFromOSFont silently yields an empty (glyph-less) font if the FIRST
-            // name doesn't exist on this OS, so pick only names actually present (macOS reports
-            // "Heiti SC" etc., NOT "PingFang SC"). Order = preferred Simplified-Chinese families.
-            string[] inst;
-            try { inst = Font.GetOSInstalledFontNames() ?? new string[0]; } catch { inst = new string[0]; }
-            var prefer = new[] { "PingFang SC", "Heiti SC", "Hiragino Sans GB", "Songti SC", "STSong", "STHeiti", "Arial Unicode MS" };
-            var pick = prefer.Where(p => Array.IndexOf(inst, p) >= 0).ToArray();
-            try
-            {
-                _cjk = pick.Length > 0
-                    ? Font.CreateDynamicFontFromOSFont(pick, 16)
-                    : Font.CreateDynamicFontFromOSFont("Arial Unicode MS", 16);
-            }
-            catch (Exception e) { Log.Error("font create failed: " + e.Message); }
+            _cjk = CjkFont.Get(16);   // shared loader (Cheats.cs) — identical font logic on every platform
         }
 
         private void OnGUI()

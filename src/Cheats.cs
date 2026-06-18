@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
 namespace RDTrainer
 {
     // Shared runtime state, read by the trainer entry point (Plugin on Windows / Trainer on
@@ -37,5 +41,67 @@ namespace RDTrainer
 
         // ---- advanced (calibration, edited then applied) ----
         public static float calV, calI, calIP2, calLat;
+    }
+
+    // CJK font for the IMGUI menu, shared by the Windows (Plugin) and native macOS/Linux
+    // (Trainer) entry points so every platform behaves identically — no more divergent per-OS
+    // font lists. Unity's legacy Font can only use OS-REGISTERED fonts (there is no runtime
+    // "load this .ttf from disk" API), so the installer drops "Noto Sans SC" into the user's
+    // OS font directory; we then load it by that single family name on all three platforms.
+    // The remaining families are fallbacks for users who skipped the font install or already
+    // have a CJK font — CreateDynamicFontFromOSFont treats the array as a glyph-fallback chain.
+    internal static class CjkFont
+    {
+        private static Font _cached;
+        private static int _cachedSize;
+
+        // Best first. "Noto Sans SC" is what our installer ships; the rest are common system
+        // CJK families on Windows / macOS / Linux respectively.
+        private static readonly string[] Preferred =
+        {
+            "Noto Sans SC", "Noto Sans CJK SC",                                  // bundled by the installer
+            "Microsoft YaHei UI", "Microsoft YaHei", "SimHei", "SimSun",         // Windows
+            "PingFang SC", "Heiti SC", "Hiragino Sans GB", "Songti SC", "STHeiti", // macOS
+            "WenQuanYi Micro Hei", "WenQuanYi Zen Hei", "Source Han Sans SC",
+            "AR PL UMing CN", "Droid Sans Fallback",                            // Linux
+            "Arial Unicode MS",
+        };
+
+        // Substrings to sniff a CJK family out of the full installed list when none of the
+        // curated names match exactly (family strings vary across distros / font releases).
+        private static readonly string[] Hints =
+        {
+            "noto sans sc", "noto sans cjk", "source han", "wenquanyi", "ar pl",
+            "droid sans fallback", "pingfang", "heiti", "songti", "yahei", "微软雅黑", "黑体", "宋体",
+        };
+
+        // CreateDynamicFontFromOSFont silently yields a glyph-less font if the FIRST name is
+        // absent on this OS, so we hand it ONLY names that are actually installed.
+        public static Font Get(int size)
+        {
+            if (_cached != null && _cachedSize == size) return _cached;
+
+            string[] inst;
+            try { inst = Font.GetOSInstalledFontNames() ?? new string[0]; } catch { inst = new string[0]; }
+
+            var pick = new List<string>();
+            foreach (var name in Preferred)
+                if (Array.IndexOf(inst, name) >= 0 && !pick.Contains(name)) pick.Add(name);
+
+            if (pick.Count == 0)
+                foreach (var h in Hints)
+                    foreach (var f in inst)
+                        if (f.ToLowerInvariant().Contains(h) && !pick.Contains(f)) pick.Add(f);
+
+            try
+            {
+                _cached = pick.Count > 0
+                    ? Font.CreateDynamicFontFromOSFont(pick.ToArray(), size)
+                    : Font.CreateDynamicFontFromOSFont("Noto Sans SC", size);
+                _cachedSize = size;
+            }
+            catch { }
+            return _cached;
+        }
     }
 }

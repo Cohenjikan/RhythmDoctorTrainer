@@ -40,6 +40,14 @@ $dll = Join-Path $game 'BepInEx\plugins\RDTrainer.dll'
 if (Test-Path $dll) { Remove-Item $dll -Force; Write-Host "已删除修改器: $dll" -ForegroundColor Green }
 else { Write-Host "未发现修改器 DLL（可能已删）。" -ForegroundColor Yellow }
 
+# 移除安装时装进用户字体目录的中文字体 + 注册表项
+try {
+    $fontPath = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts\NotoSansSC-Regular.otf'
+    if (Test-Path $fontPath) { Remove-Item $fontPath -Force -ErrorAction SilentlyContinue }
+    Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts' -Name 'Noto Sans SC (OpenType)' -ErrorAction SilentlyContinue
+    Write-Host "已移除中文字体 Noto Sans SC。" -ForegroundColor Green
+} catch {}
+
 $ans = Read-Host "是否连 BepInEx 一起移除、彻底恢复原版？(y/N)"
 if ($ans -match '^[Yy]') {
     foreach ($p in 'winhttp.dll','doorstop_config.ini','.doorstop_version','changelog.txt') {

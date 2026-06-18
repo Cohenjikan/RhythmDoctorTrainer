@@ -10,10 +10,12 @@ case "$OS" in
     GAME_SUBPATH="Rhythm Doctor.app/Contents/Resources/Data/Managed"
     GAME_PROC="Rhythm Doctor.app/Contents/MacOS/Rhythm Doctor"
     STEAM_ROOTS=("$HOME/Library/Application Support/Steam")
+    FONT_DIR="$HOME/Library/Fonts"
     ;;
   Linux)
     GAME_SUBPATH="Rhythm Doctor_Data/Managed"
     GAME_PROC="Rhythm Doctor.x86_64"
+    FONT_DIR="$HOME/.local/share/fonts"
     STEAM_ROOTS=(
       "$HOME/.local/share/Steam"
       "$HOME/.steam/steam"
@@ -72,4 +74,11 @@ else
 fi
 rm -f "$MANAGED/RDTrainerMac.dll" "$MANAGED/0Harmony.dll"
 echo "removed RDTrainerMac.dll + 0Harmony.dll"
+
+# 移除安装时装进用户字体目录的中文字体
+if [ -f "$FONT_DIR/NotoSansSC-Regular.otf" ]; then
+  rm -f "$FONT_DIR/NotoSansSC-Regular.otf"
+  command -v fc-cache >/dev/null 2>&1 && fc-cache -f "$FONT_DIR" >/dev/null 2>&1 || true
+  echo "removed Noto Sans SC font"
+fi
 echo "Done — 游戏已还原为原版。"

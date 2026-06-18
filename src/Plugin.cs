@@ -284,9 +284,7 @@ namespace RDTrainer
         private void EnsureFont()
         {
             if (_cjk != null) return;
-            try { _cjk = Font.CreateDynamicFontFromOSFont(
-                new[] { "Microsoft YaHei UI", "Microsoft YaHei", "SimHei", "SimSun", "Arial" }, 14); }
-            catch { }
+            _cjk = CjkFont.Get(14);   // shared loader (Cheats.cs) — identical font logic on every platform
         }
 
         private void OnGUI()

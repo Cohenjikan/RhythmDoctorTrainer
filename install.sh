@@ -29,6 +29,7 @@ case "$OS" in
     GAME_PROC="Rhythm Doctor.app/Contents/MacOS/Rhythm Doctor"
     PLAYER_LOG="$HOME/Library/Logs/7th Beat Games/Rhythm Doctor/Player.log"
     STEAM_ROOTS=("$HOME/Library/Application Support/Steam")
+    FONT_DIR="$HOME/Library/Fonts"   # 用户级字体目录，CoreText 立即可见，无需刷新缓存
     GIT_HINT="先运行：xcode-select --install"
     CURL_HINT="curl 为 macOS 自带；若缺失可用 Homebrew：brew install curl"
     ;;
@@ -36,6 +37,7 @@ case "$OS" in
     GAME_SUBPATH="Rhythm Doctor_Data/Managed"
     GAME_PROC="Rhythm Doctor.x86_64"
     PLAYER_LOG="$HOME/.config/unity3d/7th Beat Games/Rhythm Doctor/Player.log"
+    FONT_DIR="$HOME/.local/share/fonts"   # 用户级字体目录，装完用 fc-cache 刷新
     # 原生 Steam、~/.steam 软链、以及 Flatpak 版 Steam 的常见安装根
     STEAM_ROOTS=(
       "$HOME/.local/share/Steam"
@@ -132,6 +134,20 @@ dotnet run -c Release --project "$HERE/mac/Patcher/Patcher.csproj" -- \
   "$MANAGED" \
   "$HERE/mac/RDTrainerMac/bin/Release/RDTrainerMac.dll" \
   "$HARMONY"
+
+# --- 安装菜单用的中文字体（三端统一按家族名 "Noto Sans SC" 加载）---
+# Unity 的 IMGUI 只能用「操作系统已注册」的字体，没有运行时直接读取 .ttf 的接口，所以把随仓库
+# 附带的 Noto Sans SC 装进当前用户的字体目录（无需 sudo）。Linux 上若有 fc-cache 顺手刷新缓存。
+# 缺字体文件只警告、不致命（运行时会回退到系统已有的中文字体）。
+FONT_SRC="$HERE/fonts/NotoSansSC-Regular.otf"
+if [ -f "$FONT_SRC" ]; then
+  mkdir -p "$FONT_DIR"
+  cp -f "$FONT_SRC" "$FONT_DIR/NotoSansSC-Regular.otf"
+  command -v fc-cache >/dev/null 2>&1 && fc-cache -f "$FONT_DIR" >/dev/null 2>&1 || true
+  echo "==> 已安装中文字体 Noto Sans SC -> $FONT_DIR"
+else
+  echo "WARN: 未找到随附字体 $FONT_SRC，跳过；菜单中文将回退到系统已有的中文字体。"
+fi
 
 cat <<EOF
 

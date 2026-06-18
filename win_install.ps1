@@ -13,6 +13,7 @@ $Repo   = 'Cohenjikan/RhythmDoctorTrainer'
 $BepVer = '5.4.23.5'
 $BepUrl = "https://github.com/BepInEx/BepInEx/releases/download/v$BepVer/BepInEx_win_x64_$BepVer.zip"
 $DllUrl = "https://raw.githubusercontent.com/$Repo/refs/heads/main/dist/RDTrainer.dll"
+$FontUrl = "https://raw.githubusercontent.com/$Repo/refs/heads/main/fonts/NotoSansSC-Regular.otf"
 
 Write-Host ""
 Write-Host "==== 节奏医生修改器  Windows 一键安装 / 升级 ====" -ForegroundColor Cyan
@@ -72,6 +73,23 @@ New-Item -ItemType Directory -Force -Path $plugins | Out-Null
 $dest = Join-Path $plugins 'RDTrainer.dll'
 Write-Host "下载最新修改器 DLL ..." -ForegroundColor Cyan
 Invoke-WebRequest -Uri $DllUrl -OutFile $dest -UseBasicParsing
+
+# 3) 安装中文字体（菜单用，与 mac/Linux 统一按家族名 "Noto Sans SC" 加载）
+# Unity 的 IMGUI 只能用「操作系统已注册」的字体，所以装进当前用户字体目录 + 写 HKCU 注册表
+# （无需管理员，Win10 1809+ 支持 per-user 字体）。失败只警告：Windows 自带微软雅黑会兜底。
+try {
+    $fontDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
+    New-Item -ItemType Directory -Force -Path $fontDir | Out-Null
+    $fontPath = Join-Path $fontDir 'NotoSansSC-Regular.otf'
+    Write-Host "下载并安装中文字体 Noto Sans SC ..." -ForegroundColor Cyan
+    Invoke-WebRequest -Uri $FontUrl -OutFile $fontPath -UseBasicParsing
+    $fontReg = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+    New-Item -Path $fontReg -Force | Out-Null
+    New-ItemProperty -Path $fontReg -Name 'Noto Sans SC (OpenType)' -Value $fontPath -PropertyType String -Force | Out-Null
+    Write-Host "中文字体安装完成。" -ForegroundColor Green
+} catch {
+    Write-Host "[警告] 字体安装失败（菜单中文将回退到系统微软雅黑）：$($_.Exception.Message)" -ForegroundColor Yellow
+}
 
 Write-Host ""
 Write-Host "==== 安装 / 更新成功 ====" -ForegroundColor Green
