@@ -2,7 +2,7 @@
 
   <!--
     Mac-native build of the Rhythm Doctor trainer. NO BepInEx: this DLL is loaded by a
-    one-line static hook woven into the game's own RDStartup.Setup (see ../Patcher).
+    one-line static hook woven into the game's own RDStartup.Setup (see ../patcher).
     Build:  dotnet build -c Release -p:GameDir="/path/to/Rhythm Doctor.app/Contents/Resources/Data/Managed"
   -->
   <PropertyGroup>
@@ -25,9 +25,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Shared with the Windows build — single source of truth (see ../../src). -->
-    <Compile Include="../../src/Cheats.cs" Link="Cheats.cs" />
-    <Compile Include="../../src/Patches.cs" Link="Patches.cs" />
+    <!-- Shared core (single source of truth), linked from ../Shared. -->
+    <Compile Include="../Shared/*.cs" />
   </ItemGroup>
 
   <ItemGroup>

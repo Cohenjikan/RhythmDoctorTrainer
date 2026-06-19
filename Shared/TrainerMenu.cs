@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using BepInEx;
-using BepInEx.Configuration;
-using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 
@@ -14,22 +11,15 @@ namespace RDTrainer
     // In-game trainer for Rhythm Doctor (单机). F3 opens an overlay with three tabs:
     // 普通 (gameplay toggles), 存档修改 (irreversible save edits), 关卡直达 (level jump),
     // plus a 旧版菜单 button that swaps in the legacy 4-tab UI until the menu is reopened.
-    // BepInEx BaseUnityPlugin host; ports the macOS fork's UI/feature set.
-    [BepInPlugin(Guid, Name, Version)]
-    public class Plugin : BaseUnityPlugin
+    // Platform-neutral shared core (compiled into both builds). Hosted by a thin shell —
+    // windows/Plugin.cs (BepInEx) or mac/TrainerHost.cs (MonoBehaviour) — through IHost.
+    internal sealed class TrainerMenu
     {
-        public const string Guid = "com.cohen.rdtrainer";
-        public const string Name = "RD Trainer (节奏医生修改器)";
-        public const string Version = "2.50";
+        private bool _ok;
 
-        // 防倒卖水印：此串同时用于「显示」与「启动完整性校验」。改动或删除它会导致 SHA256 校验失败、
-        // 整个修改器拒绝工作（不挂补丁、不应用任何功能）。谁删水印谁失效。
-        public const string Watermark = "本工具免费开源，严禁倒卖 · FREE · github.com/Cohenjikan/RhythmDoctorTrainer";
-        private const string ExpectedSig = "aa5b99cb20d0aee2d25454b831b309f2ac6432c6a41ed393ec43de203b4043c1";
-        internal static bool IntegrityOK;
-
-        internal static ManualLogSource Log;
-        private static ConfigEntry<KeyboardShortcut> _menuKey;
+        private static ILog Log;
+        private readonly IHost _host;
+        public TrainerMenu(IHost host) { _host = host; }
 
         private bool _menuOpen;
         private int _tab;          // new UI: 0 普通, 1 存档修改, 2 关卡直达
@@ -72,53 +62,42 @@ namespace RDTrainer
 
         private float _lastAutoRestart;
 
-        private void Awake()
+        public void Boot()
         {
-            Log = Logger;
+            Log = _host.Log;
 
             // Anti-resale integrity gate: the watermark must be intact, or the trainer refuses to
             // function (no Harmony patches, no feature application, no menu). 删/改水印即失效。
-            IntegrityOK = Sig(Watermark) == ExpectedSig;
-            if (!IntegrityOK)
+            _ok = TrainerInfo.VerifyIntegrity();
+            if (!_ok)
             {
-                Log.LogError("完整性校验失败：水印被篡改，修改器已禁用。" +
+                Log.Error("完整性校验失败：水印被篡改，修改器已禁用。" +
                              "请从 github.com/Cohenjikan/RhythmDoctorTrainer 获取免费正版。");
                 return; // do NOT patch or enable anything
             }
 
-            _menuKey = Config.Bind("General", "MenuKey", new KeyboardShortcut(KeyCode.F3),
-                "Hotkey to open/close the trainer overlay.");
+            // Restore the persisted "show hint window" choice (Windows: BepInEx Config; mac: PlayerPrefs).
+            Cheats.showHintWindow = _host.GetBool("showHintWindow", true);
 
             // Patch each [HarmonyPatch] class independently so a single failure (e.g. an
             // unpatchable method on a given runtime) can't take down the rest of the trainer.
-            var harmony = new Harmony(Guid);
+            var harmony = new Harmony(TrainerInfo.Guid);
             int ok = 0, fail = 0;
-            foreach (var t in typeof(Plugin).Assembly.GetTypes())
+            foreach (var t in Assembly.GetExecutingAssembly().GetTypes())
             {
                 if (t.GetCustomAttributes(typeof(HarmonyPatch), true).Length == 0) continue;
                 try { harmony.CreateClassProcessor(t).Patch(); ok++; }
-                catch (Exception e) { fail++; Log.LogError($"patch {t.Name} failed: {e.Message}"); }
+                catch (Exception e) { fail++; Log.Error($"patch {t.Name} failed: {e.Message}"); }
             }
-            Log.LogInfo($"{Name} v{Version} loaded · {Watermark} · Menu key = {_menuKey.Value} · patches ok={ok} fail={fail}");
+            Log.Info($"{TrainerInfo.Name} v{TrainerInfo.Version} loaded · {TrainerInfo.Watermark} · Menu key = {_host.MenuKeyLabel} · patches ok={ok} fail={fail}");
         }
 
-        private static string Sig(string s)
+        public void Tick()
         {
-            using (var sha = System.Security.Cryptography.SHA256.Create())
-            {
-                byte[] h = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(s));
-                var sb = new System.Text.StringBuilder(h.Length * 2);
-                foreach (byte b in h) sb.Append(b.ToString("x2"));
-                return sb.ToString();
-            }
-        }
-
-        private void Update()
-        {
-            if (!IntegrityOK) return;
+            if (!_ok) return;
             try
             {
-                if (_menuKey.Value.IsDown())
+                if (_host.MenuKeyDown())
                 {
                     _menuOpen = !_menuOpen;
                     if (_menuOpen) _legacy = false; // reopening always returns to the new UI
@@ -139,7 +118,7 @@ namespace RDTrainer
                 if (Cheats.autoRestartOnMiss) AutoRestartTick();
                 if (Cheats.keyOverlay) CaptureKeys();
             }
-            catch (Exception e) { Log.LogError("Update: " + e); }
+            catch (Exception e) { Log.Error("Update: " + e); }
         }
 
         private void AutoRestartTick()
@@ -152,7 +131,7 @@ namespace RDTrainer
                 if (Time.unscaledTime - _lastAutoRestart < 1.5f) return;
                 _lastAutoRestart = Time.unscaledTime;
                 g.Restart(false);
-                Log.LogInfo("auto-restart: mistake detected");
+                Log.Info("auto-restart: mistake detected");
             }
             catch { }
         }
@@ -263,7 +242,7 @@ namespace RDTrainer
             try { scnGame.levelSpeed = 1f; } catch { }
             try { ApplyLiveSpeed(1f); } catch { }
             _lastSpeedOverride = false;   // keep speed bookkeeping consistent with the released state
-            Log.LogInfo("master switch OFF — released active takeovers to vanilla");
+            Log.Info("master switch OFF — released active takeovers to vanilla");
         }
 
         // Mid-level speed: RDTime.speed drives the conductor's timing math each frame; the song's
@@ -278,7 +257,7 @@ namespace RDTrainer
                 var cond = fi != null ? fi.GetValue(null) as scrConductor : null;
                 if (cond != null) cond.pitch = v;
             }
-            catch (Exception e) { Log.LogError("ApplyLiveSpeed: " + e.Message); }
+            catch (Exception e) { Log.Error("ApplyLiveSpeed: " + e.Message); }
         }
 
         private void EnsureFont()
@@ -287,9 +266,9 @@ namespace RDTrainer
             _cjk = CjkFont.Get(14);   // shared loader (Cheats.cs) — identical font logic on every platform
         }
 
-        private void OnGUI()
+        public void Draw()
         {
-            if (!IntegrityOK) return;
+            if (!_ok) return;
             EnsureFont();
             var prev = GUI.skin.font;
             if (_cjk != null) GUI.skin.font = _cjk;
@@ -297,14 +276,14 @@ namespace RDTrainer
             // Top-left "game modified" hint — drawn as a Window (same mechanism as the menu, which
             // renders text correctly). Fixed position; shown only on non-level scenes while the menu
             // is CLOSED (complementary to the menu). Hidden inside a level.
-            if (InNonLevelScene() && !_menuOpen)
+            if (Cheats.showHintWindow && InNonLevelScene() && !_menuOpen)
                 GUILayout.Window(740182, _hintWin, DrawHintWindow, "节奏医生修改器");
 
             if (Cheats.masterEnabled && Cheats.keyOverlay)
                 _keysWin = GUILayout.Window(740183, _keysWin, DrawKeysWindow, "按键显示");
 
             if (_menuOpen)
-                _win = GUILayout.Window(740181, _win, DrawWindow, $"节奏医生修改器 v{Version}  ·  免费开源 github.com/Cohenjikan/RhythmDoctorTrainer  ·  [{_menuKey.Value}] 开/关");
+                _win = GUILayout.Window(740181, _win, DrawWindow, $"节奏医生修改器 v{TrainerInfo.Version}  ·  免费开源 github.com/Cohenjikan/RhythmDoctorTrainer  ·  [{_host.MenuKeyLabel}] 开/关");
             GUI.skin.font = prev;
         }
 
@@ -317,7 +296,7 @@ namespace RDTrainer
         private void DrawHintWindow(int id)
         {
             GUILayout.Label("-- 全局快捷键 --");
-            GUILayout.Label($"{_menuKey.Value} 开启/关闭 修改器菜单");
+            GUILayout.Label($"{_host.MenuKeyLabel} 开启/关闭 修改器菜单");
             GUILayout.Label("-- 关卡内 --");
             GUILayout.Label("F4 一键通关");
             GUILayout.Label("F5 快速重开");
@@ -391,6 +370,11 @@ namespace RDTrainer
             if (GUILayout.Button("秒通本关")) Run("WinLevel", () => { var g = scnGame.instance; if (g != null) g.WinLevel(); });
             if (GUILayout.Button("快速重开")) Run("Restart", () => { var g = scnGame.instance; if (g != null) g.Restart(false); });
             GUILayout.EndHorizontal();
+
+            GUILayout.Space(6);
+            bool showHint = GUILayout.Toggle(Cheats.showHintWindow, " 左上角提示窗口（菜单关闭时显示快捷键）");
+            if (showHint != Cheats.showHintWindow) { Cheats.showHintWindow = showHint; _host.SetBool("showHintWindow", showHint); }
+            Indent(() => GUILayout.Label($"关闭后左上角的快捷键提示窗不再出现（按 [{_host.MenuKeyLabel}] 仍可随时呼出本菜单）。此开关会被记住，重启后保持。", Lbl()));
 
             GUILayout.Space(6);
             Cheats.speedOverride = GUILayout.Toggle(Cheats.speedOverride, $" 变速 {Cheats.speed:0.00}x（重开本关生效）");
@@ -624,6 +608,12 @@ namespace RDTrainer
             GUILayout.Space(8);
             Section("彩蛋");
             Cheats.samuraiMode = GUILayout.Toggle(Cheats.samuraiMode, " 武士文本模式（SAMURAI.）");
+
+            GUILayout.Space(8);
+            Section("界面");
+            bool showHintL = GUILayout.Toggle(Cheats.showHintWindow, " 左上角提示窗口（菜单关闭时显示快捷键）");
+            if (showHintL != Cheats.showHintWindow) { Cheats.showHintWindow = showHintL; _host.SetBool("showHintWindow", showHintL); }
+            Indent(() => GUILayout.Label("关闭后左上角的快捷键提示窗不再出现；此开关会被记住，重启后保持。", Lbl()));
         }
 
         // ---------------- 旧版 · 开发者 ----------------
@@ -818,8 +808,8 @@ namespace RDTrainer
         // ---------------- helpers ----------------
         private static void Run(string what, Action act)
         {
-            try { act(); Log.LogInfo("Trainer action OK: " + what); }
-            catch (Exception e) { Log.LogError("Trainer action FAILED (" + what + "): " + e); }
+            try { act(); Log.Info("Trainer action OK: " + what); }
+            catch (Exception e) { Log.Error("Trainer action FAILED (" + what + "): " + e); }
         }
 
         private static void Indent(Action body)

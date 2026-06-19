@@ -1,0 +1,154 @@
+# ==============================================================================
+# Release build for the Rhythm Doctor trainer (all three "ends" on one runner).
+#
+# WHY ONE LINUX RUNNER BUILDS EVERYTHING
+#   The trainer itself (windows/RDTrainer.dll + mac/RDTrainerMac.dll) is pure
+#   managed IL targeting netstandard2.1 -- platform-neutral, so a single copy of
+#   each DLL runs on every OS and no Windows/macOS runner is needed. The Cecil
+#   patcher is the ONLY thing that splits by platform: each RID-specific build
+#   bundles its own native, self-contained .NET runtime so the end user installs
+#   nothing. Hence three patcher binaries (osx-arm64 / osx-x64 / linux-x64) but
+#   just one copy of each trainer DLL. Windows users don't use the patcher at all
+#   -- they load RDTrainer.dll via BepInEx/Doorstop -- so there is no Windows
+#   patcher binary.
+#
+# REQUIRED SECRET: GAME_REFS_B64
+#   The game's reference assemblies (Assembly-CSharp*.dll, RDTools.dll,
+#   UnityEngine*.dll) and the BepInEx core DLLs are NOT redistributable and are
+#   NOT present on the runner, so the trainer builds cannot compile without them.
+#   You must provide them through a repository secret named GAME_REFS_B64.
+#
+#   How to create the secret, from a working game install that already has
+#   BepInEx 5 installed (run this in a shell, with <GameDir> = the folder that
+#   contains "Rhythm Doctor_Data" and "BepInEx"):
+#
+#       tar czf refs.tgz -C "<GameDir>" "Rhythm Doctor_Data/Managed" "BepInEx/core"
+#       base64 -w0 refs.tgz
+#
+#   Copy the single-line base64 output and paste it as the value of a repository
+#   secret named GAME_REFS_B64 (Settings -> Secrets and variables -> Actions ->
+#   New repository secret). When extracted on the runner the archive yields a
+#   tree containing both "Rhythm Doctor_Data/Managed/" and "BepInEx/core/", which
+#   we feed to the builds via -p:GameDir / -p:Managed.
+# ==============================================================================
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'          # build a release whenever a v* tag is pushed (e.g. v2.5.0)
+  workflow_dispatch:  # ...and allow manual runs from the Actions tab
+
+# Needed so softprops/action-gh-release can create the GitHub Release.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # Decode the non-redistributable game reference assemblies from the secret.
+      # The extracted "refs" directory plays the role of <GameDir>: it contains
+      # both "Rhythm Doctor_Data/Managed/" and "BepInEx/core/".
+      - name: Decode game reference assemblies
+        env:
+          GAME_REFS_B64: ${{ secrets.GAME_REFS_B64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GAME_REFS_B64:-}" ]; then
+            echo "::error::Secret GAME_REFS_B64 is empty or unset. The game reference assemblies are not redistributable and are not on the runner, so the trainer cannot be built. See the comment block at the top of this workflow for how to create the secret (tar czf refs.tgz -C <GameDir> 'Rhythm Doctor_Data/Managed' 'BepInEx/core' && base64 -w0 refs.tgz)."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/refs"
+          printf '%s' "$GAME_REFS_B64" > "$RUNNER_TEMP/refs.b64"
+          base64 -d "$RUNNER_TEMP/refs.b64" | tar -xz -C "$RUNNER_TEMP/refs"
+          # Expose the resolved paths to later steps.
+          echo "GAME_DIR=$RUNNER_TEMP/refs" >> "$GITHUB_ENV"
+          echo "MANAGED_DIR=$RUNNER_TEMP/refs/Rhythm Doctor_Data/Managed" >> "$GITHUB_ENV"
+          # Sanity-check that the archive had the expected shape; fail loudly if not.
+          if [ ! -d "$RUNNER_TEMP/refs/Rhythm Doctor_Data/Managed" ] || [ ! -d "$RUNNER_TEMP/refs/BepInEx/core" ]; then
+            echo "::error::Decoded archive is missing 'Rhythm Doctor_Data/Managed' and/or 'BepInEx/core'. Re-create GAME_REFS_B64 exactly as described at the top of this workflow."
+            ls -R "$RUNNER_TEMP/refs" || true
+            exit 1
+          fi
+
+      # Windows end: BepInEx 5 plugin (netstandard2.1, platform-neutral IL).
+      # Output: windows/bin/Release/RDTrainer.dll
+      - name: Build Windows trainer (RDTrainer.dll)
+        run: |
+          set -euo pipefail
+          dotnet build windows/RDTrainer.csproj -c Release -p:GameDir="$GAME_DIR"
+
+      # macOS/Linux end: no BepInEx; loaded by the Cecil-woven hook. Pulls
+      # Lib.Harmony 2.4.2 from NuGet. Output: mac/bin/Release/RDTrainerMac.dll
+      - name: Build macOS/Linux trainer (RDTrainerMac.dll)
+        run: |
+          set -euo pipefail
+          dotnet build mac/RDTrainerMac.csproj -c Release -p:Managed="$MANAGED_DIR"
+
+      # The trainer DLL on mac/linux needs a Harmony runtime alongside it. The
+      # net472 0Harmony.dll that ships to those users is the one inside the
+      # Lib.Harmony NuGet package; copy it out of the restore cache.
+      - name: Extract net472 0Harmony.dll from NuGet cache
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          HARMONY="$HOME/.nuget/packages/lib.harmony/2.4.2/lib/net472/0Harmony.dll"
+          if [ ! -f "$HARMONY" ]; then
+            echo "::error::Expected Lib.Harmony 2.4.2 net472 0Harmony.dll at $HARMONY but it is missing. Did the mac build restore Lib.Harmony 2.4.2?"
+            exit 1
+          fi
+          cp "$HARMONY" artifacts/0Harmony.dll
+
+      # Publish the three self-contained, single-file patcher binaries. Each RID
+      # bundles its own .NET runtime, so the user installs nothing. The publish
+      # output is patcher/bin/Release/net8.0/<rid>/publish/Patcher; rename each to
+      # a per-arch asset name for the release.
+      - name: Publish per-architecture patcher binaries
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          for rid in osx-arm64 osx-x64 linux-x64; do
+            echo "::group::publish $rid"
+            dotnet publish patcher/Patcher.csproj -c Release -r "$rid"
+            cp "patcher/bin/Release/net8.0/$rid/publish/Patcher" "artifacts/patcher-$rid"
+            chmod +x "artifacts/patcher-$rid"
+            echo "::endgroup::"
+          done
+
+      # Collect the platform-neutral trainer DLLs too (convenience assets).
+      - name: Stage trainer DLLs
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cp windows/bin/Release/RDTrainer.dll    artifacts/RDTrainer.dll
+          cp mac/bin/Release/RDTrainerMac.dll     artifacts/RDTrainerMac.dll
+          echo "Release artifacts:"
+          ls -la artifacts
+
+      # Create (or update) the GitHub Release for the pushed tag and upload the
+      # assets. The THREE patcher binaries are the required assets; the DLLs and
+      # the Harmony copy are attached for convenience. On a manual
+      # (workflow_dispatch) run there is no tag, so the upload step is skipped.
+      - name: Create GitHub Release and upload assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/patcher-osx-arm64
+            artifacts/patcher-osx-x64
+            artifacts/patcher-linux-x64
+            artifacts/RDTrainer.dll
+            artifacts/RDTrainerMac.dll
+            artifacts/0Harmony.dll
+          fail_on_unmatched_files: true

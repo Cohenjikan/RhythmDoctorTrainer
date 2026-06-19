@@ -19,7 +19,7 @@ namespace RDTrainer
                 var go = new GameObject("RDTrainerMac");
                 go.hideFlags = HideFlags.HideAndDontSave;
                 UnityEngine.Object.DontDestroyOnLoad(go);
-                go.AddComponent<Trainer>();
+                go.AddComponent<TrainerHost>();
                 Log.Info("Loader started — trainer host spawned.");
             }
             catch (Exception e)

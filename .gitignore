@@ -5,6 +5,8 @@ obj/
 *.suo
 .vs/
 
-# Keep the prebuilt plugin in dist/ (do not ignore it)
-!dist/RDTrainer.dll
+# Prebuilt managed DLLs under dist/windows and dist/mac ARE committed (single source of truth for
+# users who clone). The patcher's self-contained per-arch binaries are large (~70MB each) and ship
+# via GitHub Releases — never committed.
+dist/patcher/
 .DS_Store

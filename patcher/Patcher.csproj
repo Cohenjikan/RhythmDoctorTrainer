@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>Patcher</AssemblyName>
+    <RollForward>LatestMajor</RollForward>
+
+    <!-- Architectures we ship self-contained single-file patchers for. These RIDs are the ONLY thing
+         in the project that splits by platform; the woven trainer DLLs are platform-neutral IL.
+         Publish one binary per arch:  dotnet publish -c Release -r osx-arm64|osx-x64|linux-x64
+         The single-file / self-contained switches activate ONLY when a RID is supplied, so a plain
+         `dotnet build` / `dotnet run` (no RID) stays framework-dependent and locally runnable. -->
+    <RuntimeIdentifiers>osx-arm64;osx-x64;linux-x64</RuntimeIdentifiers>
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</PublishSingleFile>
+    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract Condition="'$(RuntimeIdentifier)' != ''">true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.11.5" />
+  </ItemGroup>
+</Project>

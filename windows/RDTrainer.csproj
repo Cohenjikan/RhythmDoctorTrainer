@@ -66,4 +66,9 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Shared core (single source of truth), linked from ../Shared. -->
+    <Compile Include="..\Shared\*.cs" />
+  </ItemGroup>
+
 </Project>

@@ -12,7 +12,7 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::
 $Repo   = 'Cohenjikan/RhythmDoctorTrainer'
 $BepVer = '5.4.23.5'
 $BepUrl = "https://github.com/BepInEx/BepInEx/releases/download/v$BepVer/BepInEx_win_x64_$BepVer.zip"
-$DllUrl = "https://raw.githubusercontent.com/$Repo/refs/heads/main/dist/RDTrainer.dll"
+$DllUrl = "https://raw.githubusercontent.com/$Repo/refs/heads/main/dist/windows/RDTrainer.dll"
 $FontUrl = "https://raw.githubusercontent.com/$Repo/refs/heads/main/fonts/NotoSansSC-Regular.otf"
 
 Write-Host ""

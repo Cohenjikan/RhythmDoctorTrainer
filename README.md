@@ -36,39 +36,43 @@
 
 ## 安装
 
-### Windows
+各平台菜单热键统一为 **F3**。
 
-右键左下角 Windows 徽标 选择 **终端 或 PowerShell** 并运行：
+### Windows（BepInEx / Doorstop，不改动任何游戏文件）
+
+右键左下角 Windows 徽标，选择 **终端 或 PowerShell** 并运行：
 
 ```powershell
 irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_install.ps1 | iex
 ```
 
-进入关卡按 **F3** 呼出菜单
+脚本会**自动定位 Steam 里的游戏**、**缺少 BepInEx 时自动安装**、并下载插件与一份中日韩字体。进入关卡按 **F3** 呼出菜单。
 
 卸载：
 
 ```powershell
 irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_uninstall.ps1 | iex
 ```
-> 手动安装参考 [Windows 安装详解](#windows-安装详解bepinex)。
+> 旧的根目录地址（`win_install.ps1` / `win_uninstall.ps1`）仍可用——它们是指向上面新路径的转发垫片。手动安装参考 [Windows 安装详解](#windows-安装详解bepinex)。
 
 
 
-### macOS / Linux（原生，无需 BepInEx）
+### macOS / Linux（原生，无需 BepInEx、无需 .NET SDK、无需编译）
 
-安装：
+同一套预编译产物在 macOS 与 Linux 上**完全通用**。安装：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/install.sh | bash
 ```
 
-卸载：
+脚本会**自动识别架构**，下载预编译 DLL + 与你架构匹配的织入器 + 一份中日韩字体，然后把加载器织入游戏启动函数。进入游戏按 **F3** 呼出菜单。
+
+卸载（恢复 `Assembly-CSharp.dll` 备份）：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/uninstall.sh | bash
 ```
-> 游戏更新或 Steam 验证文件完整性后，需重新运行一次安装脚本。
+> 游戏更新或在 Steam 里「验证文件完整性」会还原补丁——重跑一次安装脚本即可。
 
 
 
@@ -135,14 +139,40 @@ curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs
 - 一键 S+
 - 一键推进剧情
 
-## 原理对比对比
+## 架构：一套共享内核 + 两个轻量宿主壳
+
+整个修改器只有**一份**逻辑。原本约 800 行的 IMGUI 菜单曾在 Windows 与 macOS 两份源码里重复，现已收敛为单一可信源：
+
+- **`Shared/`** —— 唯一可信源，通过 `<Compile Include="../Shared/*.cs" />` 同时编进两个构建：
+  - `TrainerInfo.cs` —— Guid / Name / Version / 水印（**改版本号只在这里改**）。
+  - `Cheats.cs` —— 共享状态 + 中日韩字体加载器（CjkFont）。
+  - `Patches.cs` —— Harmony 补丁。
+  - `TrainerMenu.cs` —— 整个 IMGUI 菜单 + 逐帧作弊应用。
+  - `IHost.cs` —— 平台接缝（日志 + 菜单热键 + 持久化偏好）。
+- **`windows/`** —— `Plugin.cs`，一个实现 `IHost` 的轻量 BepInEx `BaseUnityPlugin` 壳；`RDTrainer.csproj`。
+- **`mac/`** —— `TrainerHost.cs`，一个实现 `IHost` 的轻量 `MonoBehaviour` 壳；`Loader.cs`（被织入的入口点）；`Log.cs`；`RDTrainerMac.csproj`。这一个 `netstandard2.1` 构建**同时服务 macOS 与 Linux**。
+- **`patcher/`** —— `Program.cs` + `Patcher.csproj`：一个 `net8.0` 的 Mono.Cecil 静态织入器，把一次 `Loader.Init()` 调用注入游戏的 `RDStartup.Setup`。
+
+两种注入方式精神不变：**Windows** 用 BepInEx / Doorstop（不改动任何游戏文件）；**macOS / Linux** 用 Cecil 织入器把加载器织进 `Assembly-CSharp.dll`（并留一份 `.rdtrainer-backup` 以便干净卸载）。
 
 |          | Windows                             | macOS / Linux                          |
 | -------- | ----------------------------------- | -------------------------------------- |
 | 注入方式 | BepInEx 5 + Doorstop（winhttp.dll） | Mono.Cecil 静态织入游戏启动函数        |
-| 插件形态 | BaseUnityPlugin                     | 普通 MonoBehaviour（Loader 生成）      |
+| 宿主壳   | `windows/Plugin.cs`（BaseUnityPlugin） | `mac/TrainerHost.cs`（普通 MonoBehaviour，由 Loader 生成） |
 | 打补丁库 | BepInEx 自带的 HarmonyX             | 独立 0Harmony.dll（Lib.Harmony 2.4.2） |
-| 运行     | 直接使用编译结果                    | 编译+运行                              |
+| 加载方式 | BepInEx chainloader 直接加载        | Cecil 织入 `RDStartup.Setup` 调用 `Loader.Init()` |
+| 菜单逻辑 | 同一份 `Shared/` 内核               | 同一份 `Shared/` 内核                  |
+
+### 分发产物（`dist/`）
+
+- `dist/windows/RDTrainer.dll` —— BepInEx 插件。
+- `dist/mac/RDTrainerMac.dll` 与 `dist/mac/0Harmony.dll` —— **各一份**，**macOS 与 Linux 共用**。
+
+织入器的自包含可执行文件（`patcher-osx-arm64`、`patcher-osx-x64`、`patcher-linux-x64`）**不在仓库里**——它们随 GitHub Releases 发布，`install.sh` 只下载与你架构匹配的那一个。
+
+### 为什么补丁器分三份，DLL 却只有一份？
+
+修改器的托管 DLL（`RDTrainerMac.dll`、`0Harmony.dll`）是**平台无关的 CIL**，在任何操作系统 / 架构上都原样运行，所以全世界只需要**一份**。而织入器是一个**自包含可执行文件**，内部打包了一份原生 .NET 运行时（这样用户机器上什么都不用预装），这种东西天生**按架构区分**，于是有了三个构建（`osx-arm64` / `osx-x64` / `linux-x64`）。Windows 完全用不到这个织入器——它走 BepInEx。
 
 ## Windows 安装详解（BepInEx）
 
@@ -157,13 +187,13 @@ curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs
 
 ### 第二步：装本修改器
 
-**方法 A（手动，推荐）** —— 下载 [`dist/RDTrainer.dll`](dist/RDTrainer.dll)（约 23 KB），放进：
+**方法 A（一键脚本，推荐）** —— 直接运行 [安装](#安装) 一节里的 PowerShell 一行命令，它会自动定位游戏、补装 BepInEx、下载插件与字体。
+
+**方法 B（手动）** —— 下载 [`dist/windows/RDTrainer.dll`](dist/windows/RDTrainer.dll)，放进：
 
 ```text
 <游戏目录>\BepInEx\plugins\RDTrainer.dll
 ```
-
-**方法 B（脚本）** —— 克隆本仓库 → 编辑 [`tools/install.bat`](tools/install.bat) 里的 `GAME=` 路径（默认是常见 Steam 路径）→ 双击运行，它会把 `dist\RDTrainer.dll` 拷到 `BepInEx\plugins`。
 
 ### 验证
 
@@ -192,23 +222,33 @@ curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs
 - **删档 / 推进剧情等操作会修改你的存档文件** —— 删档不可恢复（有二次确认）。
 - **修改游戏可能违反其 EULA / 服务条款**，使用风险自负（账号处罚、存档损坏均有可能）。
 - **非官方粉丝工具**，与 7th Beat Games 无关联、未获授权；不分发任何游戏源码、DLL、音频或美术素材。
-- **需要 BepInEx 5（x64, Mono）**；游戏大版本更新后可能需要适配才能继续加载，**不保证**永久兼容。
+- **Windows 需要 BepInEx 5（x64, Mono）；macOS / Linux 无此依赖**（走 Cecil 织入）；游戏大版本更新后可能需要适配才能继续加载，**不保证**永久兼容。
+- **macOS / Linux：游戏更新或 Steam「验证文件完整性」会还原补丁**——重跑一次安装脚本即可。
 - **删除或篡改水印会让修改器整体失效**（设计如此，完整性闸门）。
 
 ## 从源码构建
 
-需要 .NET SDK（构建 `netstandard2.1`）、一份已装 BepInEx 的游戏副本（用于引用 DLL）。
+> 普通用户**不必**自行构建——直接用上面的一键脚本即可。仓库已自带预编译产物（`dist/`）。
+
+需要 .NET SDK，并有一份对应平台的游戏副本（用于引用 DLL）。三个工程都通过 `<Compile Include="../Shared/*.cs" />` 编入同一份 `Shared/` 内核；所有工程都用 `Private=false` 引用游戏 DLL —— **不会重新分发**它们。
 
 ```bash
+# Windows 插件（netstandard2.1，需一份已装 BepInEx 的游戏副本）
 # 默认读取 D:\steam\steamapps\common\Rhythm Doctor；其它路径用 -p:GameDir=... 覆盖
-dotnet build src/RDTrainer.csproj -c Release -p:GameDir="你的\Rhythm Doctor"
+dotnet build windows/RDTrainer.csproj -c Release -p:GameDir="你的\Rhythm Doctor"
+
+# macOS / Linux 通用的修改器 DLL（netstandard2.1）
+dotnet build mac/RDTrainerMac.csproj -c Release -p:Managed="<游戏>/.../Data/Managed"
+
+# 自包含织入器，按架构各发布一个（osx-arm64 / osx-x64 / linux-x64）
+dotnet publish patcher/Patcher.csproj -c Release -r osx-arm64
 ```
 
-产物在 `src/bin/Release/RDTrainer.dll`。仓库通过 `Private=false` 引用游戏 DLL —— **不会重新分发**它们。
+Windows 插件产物在 `windows/bin/Release/RDTrainer.dll`。
 
 ## 工作原理（简述）
 
-修改器**不做内存偏移 / AOB 扫描**，只通过 BepInEx + HarmonyX 调用游戏自身已有的开关和函数：
+修改器**不做内存偏移 / AOB 扫描**，只通过 Harmony 调用游戏自身已有的开关和函数（这些补丁都在共享的 `Shared/Patches.cs` 里，两个平台共用）：
 
 | 功能 | 实现 |
 |---|---|
@@ -223,9 +263,10 @@ dotnet build src/RDTrainer.csproj -c Release -p:GameDir="你的\Rhythm Doctor"
 
 ## 卸载
 
-- **只移除修改器**：删除 `<游戏目录>\BepInEx\plugins\RDTrainer.dll`（或运行 [`tools/uninstall.bat`](tools/uninstall.bat)）。
-- **连 BepInEx 一起移除 / 恢复原版**：删除游戏根目录的 `winhttp.dll`（最快的「禁用 BepInEx」方式），或删 `winhttp.dll` + `BepInEx/` 文件夹 + `doorstop_config.ini`。
-- 也可以在 Steam 里「验证游戏文件完整性」一键还原。
+- **Windows（只移除修改器）**：运行 [安装](#安装) 一节里的 `win_uninstall.ps1` 一行命令，或手动删除 `<游戏目录>\BepInEx\plugins\RDTrainer.dll`。
+- **Windows（连 BepInEx 一起移除 / 恢复原版）**：删除游戏根目录的 `winhttp.dll`（最快的「禁用 BepInEx」方式），或删 `winhttp.dll` + `BepInEx/` 文件夹 + `doorstop_config.ini`。
+- **macOS / Linux**：运行 `uninstall.sh` 一行命令，它会用 `.rdtrainer-backup` 还原 `Assembly-CSharp.dll`。
+- 任何平台都可以在 Steam 里「验证游戏文件完整性」一键还原。
 
 > 配置文件在 `<游戏目录>\BepInEx\config\com.cohen.rdtrainer.cfg`（可改菜单热键），卸载后可一并删除。
 
@@ -235,15 +276,17 @@ dotnet build src/RDTrainer.csproj -c Release -p:GameDir="你的\Rhythm Doctor"
 |---|---|
 | 游戏 | Rhythm Doctor（Steam 正式版） |
 | 引擎 | Unity 6（6000.3.x）/ x64 / Mono |
-| 加载器 | BepInEx 5.4.23.x |
-| 目标框架 | netstandard2.1 |
+| 加载器（Windows） | BepInEx 5.4.23.x |
+| 加载器（macOS / Linux） | Mono.Cecil 织入 + 独立 0Harmony.dll（Lib.Harmony 2.4.2） |
+| 修改器 DLL 目标框架 | netstandard2.1（平台无关，全平台共用） |
+| 织入器目标框架 | net8.0（自包含，按架构 osx-arm64 / osx-x64 / linux-x64 各发一份） |
 
-> 游戏大版本更新后可能需要适配；若加载失败，先确认 BepInEx 版本与本说明一致。本项目**不保证**永久兼容。
+> 游戏大版本更新后可能需要适配；Windows 若加载失败，先确认 BepInEx 版本与本说明一致；macOS / Linux 重跑一次安装脚本即可。本项目**不保证**永久兼容。
 
 ## 免责声明
 
 - **非官方**：本项目是粉丝制作的非官方第三方工具，与游戏开发商 [7th Beat Games](https://rhythmdr.com/) **无任何关联**，亦未获其授权或认可。《Rhythm Doctor》及其名称、商标、美术与音乐等素材的一切权利归 7th Beat Games 所有。
-- **不含游戏内容**：本仓库**仅含作者自行编写的插件代码**，不含也不分发游戏的任何源代码、DLL、音频、图像或其它素材；运行时只通过 BepInEx / HarmonyX 调用游戏**自身已存在**的公开函数，不做内存扫描。
+- **不含游戏内容**：本仓库**仅含作者自行编写的插件代码**，不含也不分发游戏的任何源代码、DLL、音频、图像或其它素材；运行时只通过 Harmony（Windows 经 BepInEx，macOS / Linux 经独立 0Harmony.dll）调用游戏**自身已存在**的公开函数，不做内存扫描。
 - **仅限单机**：本工具仅供**离线单机**的自娱、练习与录制。请**勿**用于在线、排行榜、对战或任何会影响其他玩家公平性的场景。
 - **遵守 EULA**：修改游戏可能违反其最终用户许可协议（EULA）/ 服务条款。是否使用由你自行决定，并须自行承担一切后果（如账号处罚、存档损坏等）。
 - **不规避反作弊**：本工具不提供任何「绕过反作弊 / 防封号」的保证；「解锁全部成就」甚至会写入真实 Steam 账号。

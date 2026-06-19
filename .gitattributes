@@ -1,0 +1,13 @@
+# Normalize text line endings; auto-detect by default.
+* text=auto
+
+# Shell scripts MUST stay LF — they run on macOS/Linux via `curl | bash`, and CRLF
+# would break the shebang (/bin/bash^M). Windows .bat must be CRLF for cmd.exe.
+*.sh  text eol=lf
+*.bat text eol=crlf
+
+# Committed binaries — never normalize.
+*.dll binary
+*.otf binary
+*.png binary
+*.mp4 binary

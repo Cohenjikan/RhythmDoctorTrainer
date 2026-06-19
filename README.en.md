@@ -36,9 +36,11 @@ An in-game GUI trainer for *Rhythm Doctor*, built for **single-player recording 
 
 ## Install
 
-### Windows
+The menu hotkey is **F3** on every platform.
 
-Open **PowerShell** and paste one line (auto-locates the game → installs BepInEx if missing → downloads the latest DLL; existing users get a smooth upgrade by running it too):
+### Windows (BepInEx / Doorstop — no game files modified)
+
+Open **PowerShell** and paste one line. It **auto-locates the Steam game**, **installs BepInEx if missing**, and downloads the plugin plus a CJK font (existing users get a smooth upgrade by running it too):
 
 ```powershell
 irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_install.ps1 | iex
@@ -49,22 +51,22 @@ Press **F3** in a level. Uninstall the same way:
 ```powershell
 irm https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/win_uninstall.ps1 | iex
 ```
-> Or download manually from **[Releases](https://github.com/Cohenjikan/RhythmDoctorTrainer/releases)**; full steps in [Windows install (detailed)](#windows-install-bepinex-detailed) below.
+> The old root URLs (`win_install.ps1` / `win_uninstall.ps1`) still work — they're forwarding shims pointing at the new paths above. You can also download manually from **[Releases](https://github.com/Cohenjikan/RhythmDoctorTrainer/releases)**; full steps in [Windows install (detailed)](#windows-install-bepinex-detailed) below.
 
-### macOS / Linux (native, no BepInEx)
+### macOS / Linux (native — no BepInEx, no .NET SDK, no compiling)
 
-Paste one line into a terminal (auto-installs the .NET SDK → builds → weaves the loader into the game's startup):
+One prebuilt DLL set serves **both** macOS and Linux. Paste one line into a terminal — it **detects your arch**, downloads the prebuilt DLLs + the matching patcher + a CJK font, and weaves the loader into the game's startup:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/install.sh | bash
 ```
 
-Then launch the game via Steam and press **F3** in any level to toggle the menu. Uninstall (one line too):
+Then launch the game via Steam and press **F3** in any level to toggle the menu. Uninstall (restores the `Assembly-CSharp.dll` backup):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Cohenjikan/RhythmDoctorTrainer/refs/heads/main/uninstall.sh | bash
 ```
-> After a game update or Steam "Verify integrity of game files," just re-run the install command.
+> A game update or Steam "Verify integrity of game files" reverts the patch — just re-run the install command.
 
 ---
 
@@ -123,14 +125,40 @@ Read & apply audio/visual calibration (visual / input / latency), edit the "Rhyt
 - One-click S+
 - One-click story progression
 
-## How it works: Windows vs macOS / Linux
+## Architecture: one shared core + two thin host shells
+
+The trainer has exactly **one** copy of its logic. The ~800-line IMGUI menu used to be duplicated between the Windows and macOS sources; it's now collapsed into a single source of truth:
+
+- **`Shared/`** — the single source of truth, compiled into **both** builds via `<Compile Include="../Shared/*.cs" />`:
+  - `TrainerInfo.cs` — Guid / Name / Version / watermark (**bump the version here only**).
+  - `Cheats.cs` — shared state + the CJK font loader (CjkFont).
+  - `Patches.cs` — Harmony patches.
+  - `TrainerMenu.cs` — the whole IMGUI menu + per-frame cheat application.
+  - `IHost.cs` — the platform seam (logging + menu hotkey + persisted prefs).
+- **`windows/`** — `Plugin.cs`, a thin BepInEx `BaseUnityPlugin` shell implementing `IHost`; `RDTrainer.csproj`.
+- **`mac/`** — `TrainerHost.cs`, a thin `MonoBehaviour` shell implementing `IHost`; `Loader.cs` (the woven entry point); `Log.cs`; `RDTrainerMac.csproj`. This single `netstandard2.1` build serves **both macOS and Linux**.
+- **`patcher/`** — `Program.cs` + `Patcher.csproj`: a `net8.0` Mono.Cecil static weaver that injects a `Loader.Init()` call into the game's `RDStartup.Setup`.
+
+Both injection paths are unchanged in spirit: **Windows** uses BepInEx / Doorstop (no game files modified); **macOS / Linux** use the Cecil patcher to weave the loader into `Assembly-CSharp.dll` (with a `.rdtrainer-backup` for clean uninstall).
 
 |              | Windows                              | macOS / Linux                                          |
 | ------------ | ------------------------------------ | ------------------------------------------------------ |
 | Injection    | BepInEx 5 + Doorstop (winhttp.dll)   | Mono.Cecil static weave into the game's startup method |
-| Plugin form  | BaseUnityPlugin                      | plain MonoBehaviour (spawned by Loader)                |
+| Host shell   | `windows/Plugin.cs` (BaseUnityPlugin) | `mac/TrainerHost.cs` (plain MonoBehaviour, spawned by Loader) |
 | Patch lib    | HarmonyX bundled with BepInEx        | standalone 0Harmony.dll (Lib.Harmony 2.4.2)            |
-| Runtime      | uses the prebuilt result             | builds + runs                                          |
+| Loading      | BepInEx chainloader                  | Cecil weaves a `Loader.Init()` call into `RDStartup.Setup` |
+| Menu logic   | the same `Shared/` core              | the same `Shared/` core                                |
+
+### Distribution (`dist/`)
+
+- `dist/windows/RDTrainer.dll` — the BepInEx plugin.
+- `dist/mac/RDTrainerMac.dll` and `dist/mac/0Harmony.dll` — **one copy each**, used by **both macOS and Linux**.
+
+The patcher's self-contained binaries (`patcher-osx-arm64`, `patcher-osx-x64`, `patcher-linux-x64`) are **not in the repo** — they ship via GitHub Releases, and `install.sh` downloads only the one matching your arch.
+
+### Why three patchers but one DLL set?
+
+The trainer's managed DLLs (`RDTrainerMac.dll`, `0Harmony.dll`) are **platform-neutral CIL** and run unchanged on every OS/arch, so there is exactly **one** copy. The patcher, however, is a **self-contained executable** that bundles a native .NET runtime (so users need nothing installed), which is inherently **per-architecture** — hence three builds (`osx-arm64` / `osx-x64` / `linux-x64`). Windows doesn't use the patcher at all — it uses BepInEx.
 
 ## Windows install (BepInEx, detailed)
 
@@ -145,13 +173,13 @@ For the **Steam release** (Unity 6 / x64 / Mono). BepInEx 5 is required first.
 
 ### Step 2: install this trainer
 
-**Option A (manual, recommended)** — download [`dist/RDTrainer.dll`](dist/RDTrainer.dll) (~23 KB) into:
+**Option A (one-line script, recommended)** — just run the PowerShell one-liner from [Install](#install) above; it auto-locates the game, installs BepInEx if missing, and downloads the plugin + font.
+
+**Option B (manual)** — download [`dist/windows/RDTrainer.dll`](dist/windows/RDTrainer.dll) into:
 
 ```text
 <game>\BepInEx\plugins\RDTrainer.dll
 ```
-
-**Option B (script)** — clone this repo → edit the `GAME=` path in [`tools/install.bat`](tools/install.bat) (defaults to a common Steam path) → double-click to run; it copies `dist\RDTrainer.dll` into `BepInEx\plugins`.
 
 ### Verify
 
@@ -180,23 +208,33 @@ Enter any level and press **F3** to open the menu.
 - **Deleting saves / advancing story modifies your save file** — deletion is irreversible (with a confirm step).
 - **Modding may violate the game's EULA / ToS**; use at your own risk (account penalties, save corruption are possible).
 - **Unofficial fan tool**, not affiliated with or authorized by 7th Beat Games; ships no game source, DLLs, audio, or art.
-- **Requires BepInEx 5 (x64, Mono)**; a major game update may need adapting before it loads again — **no guarantee** of permanent compatibility.
+- **Windows requires BepInEx 5 (x64, Mono); macOS / Linux have no such dependency** (Cecil weave); a major game update may need adapting before it loads again — **no guarantee** of permanent compatibility.
+- **macOS / Linux: a game update or Steam "Verify integrity of game files" reverts the patch** — just re-run the install command.
 - **Removing or altering the watermark disables the whole trainer** (by design — integrity gate).
 
 ## Build from source
 
-Needs the .NET SDK (targets `netstandard2.1`) and a copy of the game with BepInEx installed (for reference DLLs).
+> Most users **don't** need to build — just use the one-line scripts above. The repo ships prebuilt artifacts in `dist/`.
+
+Needs the .NET SDK and a copy of the game for the matching platform (for reference DLLs). All three projects compile the same `Shared/` core via `<Compile Include="../Shared/*.cs" />`, and reference game DLLs with `Private=false` — they **do not redistribute** them.
 
 ```bash
+# Windows plugin (netstandard2.1; needs a copy of the game with BepInEx installed)
 # defaults to D:\steam\steamapps\common\Rhythm Doctor; override with -p:GameDir=...
-dotnet build src/RDTrainer.csproj -c Release -p:GameDir="your\Rhythm Doctor"
+dotnet build windows/RDTrainer.csproj -c Release -p:GameDir="your\Rhythm Doctor"
+
+# macOS / Linux trainer DLL (netstandard2.1; one build serves both)
+dotnet build mac/RDTrainerMac.csproj -c Release -p:Managed="<game>/.../Data/Managed"
+
+# self-contained patcher, published per arch (osx-arm64 / osx-x64 / linux-x64)
+dotnet publish patcher/Patcher.csproj -c Release -r osx-arm64
 ```
 
-Output is at `src/bin/Release/RDTrainer.dll`. The repo references game DLLs with `Private=false` — it **does not redistribute** them.
+The Windows plugin output is at `windows/bin/Release/RDTrainer.dll`.
 
 ## How it works (in brief)
 
-The trainer does **no memory offset / AOB scanning** — it only calls the game's own switches and functions through BepInEx + HarmonyX:
+The trainer does **no memory offset / AOB scanning** — it only calls the game's own switches and functions through Harmony (these patches all live in the shared `Shared/Patches.cs`, used by both platforms):
 
 | Feature | Implementation |
 |---|---|
@@ -211,9 +249,10 @@ It just "calls the game's own logic," so it's inherently more stable than memory
 
 ## Uninstall
 
-- **Remove just the trainer**: delete `<game>\BepInEx\plugins\RDTrainer.dll` (or run [`tools/uninstall.bat`](tools/uninstall.bat)).
-- **Remove BepInEx too / restore vanilla**: delete `winhttp.dll` from the game root (fastest way to disable BepInEx), or delete `winhttp.dll` + the `BepInEx/` folder + `doorstop_config.ini`.
-- You can also "Verify integrity of game files" in Steam to restore everything.
+- **Windows (remove just the trainer)**: run the `win_uninstall.ps1` one-liner from [Install](#install), or manually delete `<game>\BepInEx\plugins\RDTrainer.dll`.
+- **Windows (remove BepInEx too / restore vanilla)**: delete `winhttp.dll` from the game root (fastest way to disable BepInEx), or delete `winhttp.dll` + the `BepInEx/` folder + `doorstop_config.ini`.
+- **macOS / Linux**: run the `uninstall.sh` one-liner; it restores `Assembly-CSharp.dll` from the `.rdtrainer-backup`.
+- On any platform you can also "Verify integrity of game files" in Steam to restore everything.
 
 > The config file is at `<game>\BepInEx\config\com.cohen.rdtrainer.cfg` (you can rebind the menu hotkey); delete it too after uninstalling.
 
@@ -223,15 +262,17 @@ It just "calls the game's own logic," so it's inherently more stable than memory
 |---|---|
 | Game | Rhythm Doctor (Steam release) |
 | Engine | Unity 6 (6000.3.x) / x64 / Mono |
-| Loader | BepInEx 5.4.23.x |
-| Target framework | netstandard2.1 |
+| Loader (Windows) | BepInEx 5.4.23.x |
+| Loader (macOS / Linux) | Mono.Cecil weave + standalone 0Harmony.dll (Lib.Harmony 2.4.2) |
+| Trainer DLL target framework | netstandard2.1 (platform-neutral, shared by all platforms) |
+| Patcher target framework | net8.0 (self-contained, one build per arch: osx-arm64 / osx-x64 / linux-x64) |
 
-> A major game update may need adapting; if it fails to load, first confirm your BepInEx version matches this doc. **No guarantee** of permanent compatibility.
+> A major game update may need adapting; on Windows, if it fails to load, first confirm your BepInEx version matches this doc; on macOS / Linux, just re-run the install script. **No guarantee** of permanent compatibility.
 
 ## Disclaimer
 
 - **Unofficial**: a fan-made, unofficial third-party tool, **not affiliated with** or endorsed by the developer [7th Beat Games](https://rhythmdr.com/). All rights to *Rhythm Doctor* and its name, trademarks, art, and music belong to 7th Beat Games.
-- **No game content**: this repo **contains only the author's own plugin code** — no game source, DLLs, audio, images, or other assets; at runtime it only calls the game's **existing** public functions via BepInEx / HarmonyX, with no memory scanning.
+- **No game content**: this repo **contains only the author's own plugin code** — no game source, DLLs, audio, images, or other assets; at runtime it only calls the game's **existing** public functions via Harmony (through BepInEx on Windows, through a standalone 0Harmony.dll on macOS / Linux), with no memory scanning.
 - **Single-player only**: for **offline single-player** fun, practice, and recording. Do **not** use it online, on leaderboards, in versus, or anywhere it affects other players' fairness.
 - **Respect the EULA**: modding may violate the game's EULA / ToS. Whether to use it is your call, and you bear all consequences (account penalties, save corruption, etc.).
 - **No anti-cheat bypass**: this tool offers no "bypass anti-cheat / avoid bans" guarantee; "unlock all achievements" even writes to your real Steam account.
